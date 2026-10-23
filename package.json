@@ -1,0 +1,38 @@
+{
+  "name": "@seolyticize/sdk",
+  "version": "0.1.0",
+  "description": "Typed client for the Seolyticize API: every tool, generated from the registry that runs it.",
+  "type": "module",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepare": "npm run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "@types/node": "^22.18.13"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Seolyticize/sdk-typescript.git"
+  },
+  "homepage": "https://github.com/Seolyticize/sdk-typescript#readme",
+  "bugs": {
+    "url": "https://github.com/Seolyticize/sdk-typescript/issues"
+  }
+}
