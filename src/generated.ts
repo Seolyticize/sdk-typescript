@@ -571,6 +571,8 @@ export interface ToolInputs {
     }>;
     /** Constraints: max items 100. */
     remove?: string[];
+    /** Replaces the brand terms: what people type when already looking for this business (its name, products, misspellings). Search Console splits branded from non-branded queries with them. [] goes back to the client's name and domain. Constraints: max items 50. */
+    brandTerms?: string[];
   };
   /** Input for draft_client_brief: Draft the client brief from their website. */
   draft_client_brief: {
@@ -1849,6 +1851,598 @@ export interface ToolInputs {
     /** Constraints: min length 1. */
     listId: string;
   };
+  /** Input for get_search_changes: What changed in search. */
+  get_search_changes: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Length of each period, ending on the newest day Google has finished counting. Constraints: min 1, max 366. Defaults to 28. */
+    days?: number;
+    /** previous: the same number of days just before. year: the same days a year earlier. Defaults to "previous". */
+    compare?: "previous" | "year";
+    /** Defaults to "query". */
+    dimension?: "query" | "page";
+    /** non_branded is what SEO work moves; branded is people already looking for the client. Defaults to "all". */
+    brand?: "all" | "branded" | "non_branded";
+    /** Defaults to null. */
+    country?: string | null;
+    /** Defaults to null. */
+    device?: "DESKTOP" | "MOBILE" | "TABLET" | null;
+    /** Constraints: min 0, max 1000000. Defaults to 10. */
+    minImpressions?: number;
+    /** Constraints: min 1, max 200. Defaults to 25. */
+    limit?: number;
+  };
+  /** Input for get_brand_split: Branded vs non-branded search. */
+  get_brand_split: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Default: 16 months before to. Defaults to null. */
+    from?: string | null;
+    /** Default: the newest day archived. Defaults to null. */
+    to?: string | null;
+    /** Defaults to "week". */
+    interval?: "day" | "week" | "month";
+    /** Defaults to null. */
+    country?: string | null;
+  };
+  /** Input for get_query_page_swaps: Queries answered by a different page. */
+  get_query_page_swaps: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Length of each period, ending on the newest day Google has finished counting. Constraints: min 1, max 366. Defaults to 28. */
+    days?: number;
+    /** previous: the same number of days just before. year: the same days a year earlier. Defaults to "previous". */
+    compare?: "previous" | "year";
+    /** non_branded is what SEO work moves; branded is people already looking for the client. Defaults to "all". */
+    brand?: "all" | "branded" | "non_branded";
+    /** Constraints: min 0, max 1000000. Defaults to 20. */
+    minImpressions?: number;
+    /** Constraints: min 1, max 200. Defaults to 50. */
+    limit?: number;
+  };
+  /** Input for get_content_groups: Search traffic by section. */
+  get_content_groups: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Length of each period, ending on the newest day Google has finished counting. Constraints: min 1, max 366. Defaults to 28. */
+    days?: number;
+    /** previous: the same number of days just before. year: the same days a year earlier. Defaults to "previous". */
+    compare?: "previous" | "year";
+    /** Defaults to null. */
+    groups?:
+      | {
+          /** Constraints: min length 1, max length 80. */
+          name: string;
+          /** A path glob: /guides/*, /community/*\/u, / Constraints: min length 1, max length 200. */
+          pattern: string;
+        }[]
+      | null;
+    /** Defaults to null. */
+    country?: string | null;
+    /** Defaults to null. */
+    device?: "DESKTOP" | "MOBILE" | "TABLET" | null;
+  };
+  /** Input for get_search_appearance: Search traffic by result kind. */
+  get_search_appearance: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Length of each period, ending on the newest day Google has finished counting. Constraints: min 1, max 366. Defaults to 28. */
+    days?: number;
+    /** previous: the same number of days just before. year: the same days a year earlier. Defaults to "previous". */
+    compare?: "previous" | "year";
+  };
+  /** Input for get_search_timeline: Search traffic with what happened. */
+  get_search_timeline: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Default: 90 days before to. Defaults to null. */
+    from?: string | null;
+    /** Default: the newest day archived. Defaults to null. */
+    to?: string | null;
+  };
+  /** Input for add_annotation: Note something on the client's timeline. */
+  add_annotation: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** The day it happened (UTC). Constraints: pattern ^\d{4}-\d{2}-\d{2}$. */
+    on: string;
+    kind: "deploy" | "publish" | "content_update" | "campaign" | "technical" | "note";
+    /** Constraints: min length 1, max length 200. */
+    title: string;
+    /** Defaults to null. */
+    detail?: string | null;
+    /** Defaults to null. */
+    url?: string | null;
+  };
+  /** Input for list_annotations: List the client's timeline. */
+  list_annotations: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Default: a year before to. Defaults to null. */
+    from?: string | null;
+    /** Default: today. Defaults to null. */
+    to?: string | null;
+    /** Defaults to true. */
+    includeGoogle?: boolean;
+  };
+  /** Input for remove_annotations: Remove timeline notes. */
+  remove_annotations: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Constraints: min items 1, max items 100. */
+    ids: string[];
+  };
+  /** Input for get_serp_content_profile: What the ranking pages have in common. */
+  get_serp_content_profile: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Constraints: min length 1, max length 200. */
+    keyword: string;
+    /** How many organic results to read. Constraints: min 3, max 20. Defaults to 10. */
+    depth?: number;
+    /** Google location code (2840 United States, 2826 United Kingdom, 2724 Spain). Default: the client's project. Defaults to null. */
+    locationCode?: number | null;
+    /** Language code (en, es). Default: the client's project. Defaults to null. */
+    languageCode?: string | null;
+    /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). A purchase that would take the call past it is refused before anything is bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
+    maxCostMicros?: number;
+  };
+  /** Input for build_content_brief: Build a content brief. */
+  build_content_brief: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Constraints: min length 1, max length 200. */
+    keyword: string;
+    /** Constraints: max items 20. */
+    relatedKeywords?: string[];
+    /** The page this brief is for, if it exists, so it is not suggested as its own internal link. */
+    targetUrl?: string | null;
+    /** Constraints: min 3, max 20. Defaults to 10. */
+    depth?: number;
+    /** Defaults to false. */
+    save?: boolean;
+    /** Google location code (2840 United States, 2826 United Kingdom, 2724 Spain). Default: the client's project. Defaults to null. */
+    locationCode?: number | null;
+    /** Language code (en, es). Default: the client's project. Defaults to null. */
+    languageCode?: string | null;
+    /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). A purchase that would take the call past it is refused before anything is bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
+    maxCostMicros?: number;
+  };
+  /** Input for score_content: Score a draft before publishing. */
+  score_content: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Constraints: min length 1, max length 200. */
+    keyword: string;
+    url?: string | null;
+    html?: string | null;
+    markdown?: string | null;
+    /** Google location code (2840 United States, 2826 United Kingdom, 2724 Spain). Default: the client's project. Defaults to null. */
+    locationCode?: number | null;
+    /** Language code (en, es). Default: the client's project. Defaults to null. */
+    languageCode?: string | null;
+    /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). A purchase that would take the call past it is refused before anything is bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
+    maxCostMicros?: number;
+  };
+  /** Input for cluster_keywords: Group keywords into topics. */
+  cluster_keywords: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Defaults to null. */
+    keywords?: string[] | null;
+    /** Defaults to null. */
+    listId?: string | null;
+    /** Constraints: min 1, max 10. Defaults to 3. */
+    minShared?: number;
+    /** Constraints: min 3, max 20. Defaults to 10. */
+    depth?: number;
+    /** head: every keyword overlaps the topic's top keyword (plan pages with this). connected: chains of overlap join topics. Defaults to "head". */
+    mode?: "head" | "connected";
+    /** Default: the client's project. Defaults to null. */
+    locationCode?: number | null;
+    /** Default: the client's project. Defaults to null. */
+    languageCode?: string | null;
+    /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). A purchase that would take the call past it is refused before anything is bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
+    maxCostMicros?: number;
+  };
+  /** Input for get_topic_map: Map topics to pages. */
+  get_topic_map: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Defaults to null. */
+    seed?: string | null;
+    /** Constraints: min 7, max 480. Defaults to 90. */
+    days?: number;
+    /** Constraints: max items 100. Defaults to []. */
+    extraKeywords?: string[];
+    /** Defaults to "serp_overlap". */
+    method?: "serp_overlap" | "search_console";
+    /** How many Search Console queries to map, most impressions first. Constraints: min 10, max 200. Defaults to 100. */
+    limit?: number;
+    /** Constraints: min 1, max 10. Defaults to 3. */
+    minShared?: number;
+    /** Default: the client's project. Defaults to null. */
+    locationCode?: number | null;
+    /** Default: the client's project. Defaults to null. */
+    languageCode?: string | null;
+    /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). A purchase that would take the call past it is refused before anything is bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
+    maxCostMicros?: number;
+  };
+  /** Input for compare_crawls: What changed since the last crawl. */
+  compare_crawls: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** A crawl id from list_crawls, or "latest" for the newest complete one. Constraints: min length 1. Defaults to "latest". */
+    crawlId?: string;
+    /** Defaults to null. */
+    againstCrawlId?: string | null;
+    /** Constraints: min 1, max 50. Defaults to 10. */
+    sample?: number;
+  };
+  /** Input for get_issue_templates: Issues by template. */
+  get_issue_templates: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** A crawl id from list_crawls, or "latest" for the newest complete one. Constraints: min length 1. Defaults to "latest". */
+    crawlId?: string;
+    /** Defaults to null. */
+    ruleId?: string | null;
+  };
+  /** Input for get_parameter_report: URL parameters and crawl waste. */
+  get_parameter_report: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** A crawl id from list_crawls, or "latest" for the newest complete one. Constraints: min length 1. Defaults to "latest". */
+    crawlId?: string;
+  };
+  /** Input for get_crawl_settings: How the site is crawled. */
+  get_crawl_settings: {
+    /** Constraints: min length 1. */
+    clientId: string;
+  };
+  /** Input for set_crawl_settings: Change how the site is crawled. */
+  set_crawl_settings: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Constraints: max items 50. */
+    stripParams?: string[];
+    /** Constraints: max items 10. */
+    extractions?: Array<{
+      /** Constraints: min length 1, max length 40. */
+      name: string;
+      kind: "css" | "regex" | "jsonld" | "meta";
+      /** Constraints: min length 1, max length 300. */
+      expression: string;
+      attribute?: string | null;
+      all?: boolean;
+    }>;
+    render?: "off" | "shells" | "all";
+    /** Constraints: min 1, max 5000. */
+    renderMaxPages?: number;
+  };
+  /** Input for get_page_details: Everything the crawl read on a page. */
+  get_page_details: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** A crawl id from list_crawls, or "latest" for the newest complete one. Constraints: min length 1. Defaults to "latest". */
+    crawlId?: string;
+    /** Constraints: format uri. */
+    url: string;
+  };
+  /** Input for get_extraction_results: Custom extraction results. */
+  get_extraction_results: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** A crawl id from list_crawls, or "latest" for the newest complete one. Constraints: min length 1. Defaults to "latest". */
+    crawlId?: string;
+    /** Defaults to null. */
+    name?: string | null;
+    /** Constraints: min 1, max 1000. Defaults to 200. */
+    limit?: number;
+    /** Constraints: min 0, max 9007199254740991. Defaults to 0. */
+    offset?: number;
+  };
+  /** Input for get_rendering_report: What JavaScript changes. */
+  get_rendering_report: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** A crawl id from list_crawls, or "latest" for the newest complete one. Constraints: min length 1. Defaults to "latest". */
+    crawlId?: string;
+    /** Constraints: min 1, max 500. Defaults to 50. */
+    limit?: number;
+  };
+  /** Input for get_internal_link_graph: The internal link graph. */
+  get_internal_link_graph: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** A crawl id from list_crawls, or "latest" for the newest complete one. Constraints: min length 1. Defaults to "latest". */
+    crawlId?: string;
+    /** Defaults to "pagerank". */
+    sort?: "pagerank" | "inlinks" | "depth";
+    /** Constraints: min 1, max 1000. Defaults to 100. */
+    limit?: number;
+    /** Constraints: min 0, max 9007199254740991. Defaults to 0. */
+    offset?: number;
+  };
+  /** Input for suggest_internal_links: Suggest internal links. */
+  suggest_internal_links: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** A crawl id from list_crawls, or "latest" for the newest complete one. Constraints: min length 1. Defaults to "latest". */
+    crawlId?: string;
+    /** Defaults to null. */
+    targetUrl?: string | null;
+    /** Constraints: max items 20. Defaults to []. */
+    phrases?: string[];
+    /** Constraints: min 1, max 50. Defaults to 10. */
+    limit?: number;
+  };
+  /** Input for get_anchor_overlap: One anchor, several pages. */
+  get_anchor_overlap: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** A crawl id from list_crawls, or "latest" for the newest complete one. Constraints: min length 1. Defaults to "latest". */
+    crawlId?: string;
+    /** Constraints: min 1, max 500. Defaults to 50. */
+    limit?: number;
+  };
+  /** Input for get_conversions: Conversions by landing page and source. */
+  get_conversions: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Defaults to "web_analytics". */
+    source?: "web_analytics" | "ga4";
+    /** Defaults to "landing_page". */
+    by?: "landing_page" | "source" | "referrer";
+    /** Defaults to "all". */
+    channel?: "all" | "search" | "ai";
+    /** Constraints: max items 20. Defaults to []. */
+    goals?: string[];
+    /** Constraints: min 1, max 365. Defaults to 28. */
+    days?: number;
+    /** Constraints: min 1, max 250. Defaults to 50. */
+    limit?: number;
+  };
+  /** Input for list_conversion_goals: The events a site sends. */
+  list_conversion_goals: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Constraints: min 1, max 365. Defaults to 90. */
+    days?: number;
+  };
+  /** Input for get_referring_domains: Referring domains. */
+  get_referring_domains: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Any domain; default the client's own. Defaults to null. */
+    domain?: string | null;
+    /** Defaults to "auto". */
+    source?: "auto" | "vendor" | "index";
+    /** Constraints: min 1, max 1000. Defaults to 100. */
+    limit?: number;
+    /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). A purchase that would take the call past it is refused before anything is bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
+    maxCostMicros?: number;
+  };
+  /** Input for get_backlinks: Backlinks, new and lost. */
+  get_backlinks: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Any domain; default the client's own. Defaults to null. */
+    domain?: string | null;
+    /** Defaults to "auto". */
+    source?: "auto" | "vendor" | "index";
+    /** Constraints: min 1, max 1000. Defaults to 100. */
+    limit?: number;
+    /** Defaults to "all". */
+    mode?: "all" | "new" | "lost";
+    /** Constraints: min 1, max 365. Defaults to 30. */
+    days?: number;
+    /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). A purchase that would take the call past it is refused before anything is bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
+    maxCostMicros?: number;
+  };
+  /** Input for get_anchor_distribution: Anchor text mix. */
+  get_anchor_distribution: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Any domain; default the client's own. Defaults to null. */
+    domain?: string | null;
+    /** Defaults to "auto". */
+    source?: "auto" | "vendor" | "index";
+    /** Constraints: min 1, max 1000. Defaults to 100. */
+    limit?: number;
+    /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). A purchase that would take the call past it is refused before anything is bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
+    maxCostMicros?: number;
+  };
+  /** Input for get_best_pages_by_links: Pages that attract links. */
+  get_best_pages_by_links: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Any domain; default the client's own. Defaults to null. */
+    domain?: string | null;
+    /** Defaults to "auto". */
+    source?: "auto" | "vendor" | "index";
+    /** Constraints: min 1, max 1000. Defaults to 100. */
+    limit?: number;
+    /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). A purchase that would take the call past it is refused before anything is bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
+    maxCostMicros?: number;
+  };
+  /** Input for get_broken_backlinks: Links to broken pages. */
+  get_broken_backlinks: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Defaults to "auto". */
+    source?: "auto" | "vendor" | "index";
+    /** Constraints: min 1, max 1000. Defaults to 100. */
+    limit?: number;
+    /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). A purchase that would take the call past it is refused before anything is bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
+    maxCostMicros?: number;
+  };
+  /** Input for get_competitor_new_pages: What competitors published. */
+  get_competitor_new_pages: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Constraints: min 1, max 365. Defaults to 7. */
+    days?: number;
+    /** Defaults to null. */
+    competitors?: string[] | null;
+    /** Constraints: min 1, max 500. Defaults to 100. */
+    limit?: number;
+  };
+  /** Input for get_competitor_page_changes: Changes to pages that outrank us. */
+  get_competitor_page_changes: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Default: every tracker of the client. Defaults to null. */
+    trackerId?: string | null;
+    /** Constraints: min 1, max 365. Defaults to 30. */
+    days?: number;
+  };
+  /** Input for get_serp_volatility: How much the results are moving. */
+  get_serp_volatility: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Default: every tracker of the client. Defaults to null. */
+    trackerId?: string | null;
+    /** Constraints: min 7, max 180. Defaults to 30. */
+    days?: number;
+  };
+  /** Input for get_ai_overview_citations: Who the AI Overview cites. */
+  get_ai_overview_citations: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Default: every tracker of the client. Defaults to null. */
+    trackerId?: string | null;
+    /** Defaults to "ai_overview". */
+    feature?: "ai_overview" | "featured_snippet" | "people_also_ask";
+    /** Constraints: min 1, max 365. Defaults to 30. */
+    days?: number;
+  };
+  /** Input for describe_datasets: What can be queried. */
+  describe_datasets: Record<string, never>;
+  /** Input for query_data: Query the stored data. */
+  query_data: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    dataset:
+      | "gsc"
+      | "web_events"
+      | "crawl_pages"
+      | "crawl_issues"
+      | "crawl_links"
+      | "rank_captures"
+      | "backlinks";
+    /** Constraints: max items 6. Defaults to []. */
+    dimensions?: string[];
+    /** Constraints: max items 10. Defaults to []. */
+    metrics?: string[];
+    /** Constraints: max items 20. */
+    columns?: string[];
+    /** Constraints: max items 20. Defaults to []. */
+    filters?: Array<{
+      /** Constraints: min length 1. */
+      column: string;
+      op:
+        | "eq"
+        | "neq"
+        | "contains"
+        | "not_contains"
+        | "starts_with"
+        | "gt"
+        | "gte"
+        | "lt"
+        | "lte"
+        | "in"
+        | "regex";
+      value: string | number | boolean | Array<string | number>;
+    }>;
+    /** Defaults to null. */
+    from?: string | null;
+    /** Defaults to null. */
+    to?: string | null;
+    /** Constraints: max items 4. Defaults to []. */
+    orderBy?: {
+      /** Constraints: min length 1. */
+      field: string;
+      /** Defaults to true. */
+      desc?: boolean;
+    }[];
+    /** For crawl datasets: a crawl id or latest. Constraints: min length 1. Defaults to "latest". */
+    crawlId?: string;
+    /** Constraints: min 1, max 10000. Defaults to 1000. */
+    limit?: number;
+  };
+  /** Input for export_data: Export stored data to a file. */
+  export_data: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    dataset:
+      | "gsc"
+      | "web_events"
+      | "crawl_pages"
+      | "crawl_issues"
+      | "crawl_links"
+      | "rank_captures"
+      | "backlinks";
+    /** Constraints: max items 6. Defaults to []. */
+    dimensions?: string[];
+    /** Constraints: max items 10. Defaults to []. */
+    metrics?: string[];
+    /** Constraints: max items 20. */
+    columns?: string[];
+    /** Constraints: max items 20. Defaults to []. */
+    filters?: Array<{
+      /** Constraints: min length 1. */
+      column: string;
+      op:
+        | "eq"
+        | "neq"
+        | "contains"
+        | "not_contains"
+        | "starts_with"
+        | "gt"
+        | "gte"
+        | "lt"
+        | "lte"
+        | "in"
+        | "regex";
+      value: string | number | boolean | Array<string | number>;
+    }>;
+    /** Defaults to null. */
+    from?: string | null;
+    /** Defaults to null. */
+    to?: string | null;
+    /** Constraints: max items 4. Defaults to []. */
+    orderBy?: {
+      /** Constraints: min length 1. */
+      field: string;
+      /** Defaults to true. */
+      desc?: boolean;
+    }[];
+    /** For crawl datasets: a crawl id or latest. Constraints: min length 1. Defaults to "latest". */
+    crawlId?: string;
+    /** Constraints: min 1, max 1000000. Defaults to 1000000. */
+    limit?: number;
+    /** Defaults to "csv". */
+    format?: "csv" | "jsonl" | "parquet";
+  };
+  /** Input for get_demand_matrix: Demand for every combination. */
+  get_demand_matrix: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Words with {slot} placeholders, e.g. 'receive sms {service} {country}'. Constraints: min length 1, max length 200. */
+    pattern: string;
+    slots: {
+      [key: string]: string[];
+    };
+    /** Defaults to null. */
+    locationCode?: number | null;
+    /** Defaults to null. */
+    languageCode?: string | null;
+    /** Below this monthly volume a combination is skip. Constraints: min 0, max 9007199254740991. Defaults to 10. */
+    minVolume?: number;
+    /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). A purchase that would take the call past it is refused before anything is bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
+    maxCostMicros?: number;
+  };
   /** Input for get_indexnow_key: Get the IndexNow key. */
   get_indexnow_key: {
     /** Constraints: min length 1. */
@@ -2311,6 +2905,86 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
   rename_keyword_list: { permission: "data:write", clientScoped: false, readOnly: false },
   delete_keyword_list: { permission: "data:write", clientScoped: false, readOnly: false },
   add_list_to_tracker: { permission: "data:write", clientScoped: true, readOnly: false },
+  get_search_changes: { permission: "data:read", clientScoped: true, readOnly: true },
+  get_brand_split: { permission: "data:read", clientScoped: true, readOnly: true },
+  get_query_page_swaps: { permission: "data:read", clientScoped: true, readOnly: true },
+  get_content_groups: { permission: "data:read", clientScoped: true, readOnly: true },
+  get_search_appearance: { permission: "data:read", clientScoped: true, readOnly: true },
+  get_search_timeline: { permission: "data:read", clientScoped: true, readOnly: true },
+  add_annotation: { permission: "data:write", clientScoped: true, readOnly: false },
+  list_annotations: { permission: "data:read", clientScoped: true, readOnly: true },
+  remove_annotations: { permission: "data:write", clientScoped: true, readOnly: false },
+  get_serp_content_profile: {
+    permission: "spend:incur",
+    clientScoped: true,
+    readOnly: false,
+  },
+  build_content_brief: { permission: "spend:incur", clientScoped: true, readOnly: false },
+  score_content: { permission: "spend:incur", clientScoped: true, readOnly: false },
+  cluster_keywords: { permission: "spend:incur", clientScoped: true, readOnly: false },
+  get_topic_map: { permission: "spend:incur", clientScoped: true, readOnly: false },
+  compare_crawls: { permission: "data:read", clientScoped: true, readOnly: true },
+  get_issue_templates: { permission: "data:read", clientScoped: true, readOnly: true },
+  get_parameter_report: { permission: "data:read", clientScoped: true, readOnly: true },
+  get_crawl_settings: { permission: "data:read", clientScoped: true, readOnly: true },
+  set_crawl_settings: {
+    permission: "project:manage",
+    clientScoped: true,
+    readOnly: false,
+  },
+  get_page_details: { permission: "data:read", clientScoped: true, readOnly: true },
+  get_extraction_results: { permission: "data:read", clientScoped: true, readOnly: true },
+  get_rendering_report: { permission: "data:read", clientScoped: true, readOnly: true },
+  get_internal_link_graph: {
+    permission: "data:read",
+    clientScoped: true,
+    readOnly: true,
+  },
+  suggest_internal_links: { permission: "data:read", clientScoped: true, readOnly: true },
+  get_anchor_overlap: { permission: "data:read", clientScoped: true, readOnly: true },
+  get_conversions: { permission: "data:read", clientScoped: true, readOnly: true },
+  list_conversion_goals: { permission: "data:read", clientScoped: true, readOnly: true },
+  get_referring_domains: {
+    permission: "spend:incur",
+    clientScoped: true,
+    readOnly: false,
+  },
+  get_backlinks: { permission: "spend:incur", clientScoped: true, readOnly: false },
+  get_anchor_distribution: {
+    permission: "spend:incur",
+    clientScoped: true,
+    readOnly: false,
+  },
+  get_best_pages_by_links: {
+    permission: "spend:incur",
+    clientScoped: true,
+    readOnly: false,
+  },
+  get_broken_backlinks: {
+    permission: "spend:incur",
+    clientScoped: true,
+    readOnly: false,
+  },
+  get_competitor_new_pages: {
+    permission: "data:read",
+    clientScoped: true,
+    readOnly: true,
+  },
+  get_competitor_page_changes: {
+    permission: "data:read",
+    clientScoped: true,
+    readOnly: true,
+  },
+  get_serp_volatility: { permission: "data:read", clientScoped: true, readOnly: true },
+  get_ai_overview_citations: {
+    permission: "data:read",
+    clientScoped: true,
+    readOnly: true,
+  },
+  describe_datasets: { permission: "data:read", clientScoped: false, readOnly: true },
+  query_data: { permission: "data:read", clientScoped: true, readOnly: true },
+  export_data: { permission: "data:read", clientScoped: true, readOnly: true },
+  get_demand_matrix: { permission: "spend:incur", clientScoped: true, readOnly: false },
   get_indexnow_key: { permission: "data:read", clientScoped: true, readOnly: true },
   issue_indexnow_key: {
     permission: "client:manage",
@@ -2981,7 +3655,7 @@ export interface ToolMethods {
   /**
    * Update the client brief.
    *
-   * Changes the client brief that every teammate and agent reads. Answers 'remember this about the client'. Set fields (overview, goal, positioning, audience, voice; null or empty clears one, fields left out are untouched); add entries (kind competitor, key_page, section or research, each with a title and optional body and url); edit entries by id; remove entries by id (unknown ids are ignored). Applied in that order, so removing an old competitor and adding its replacement in one call works. Record a research entry when you finish a piece of work whose conclusions the next one should start from; the 50 newest research notes are kept. Returns the brief as it now stands. Free.
+   * Changes the client brief that every teammate and agent reads. Answers 'remember this about the client'. Set fields (overview, goal, positioning, audience, voice; null or empty clears one, fields left out are untouched); add entries (kind competitor, key_page, section or research, each with a title and optional body and url); edit entries by id; remove entries by id (unknown ids are ignored); replace the brand terms (brandTerms) that split branded from non-branded search. Applied in that order, so removing an old competitor and adding its replacement in one call works. Record a research entry when you finish a piece of work whose conclusions the next one should start from; the 50 newest research notes are kept. Returns the brief as it now stands. Free.
    *
    * Requires `data:write`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -4640,6 +5314,486 @@ export interface ToolMethods {
    */
   add_list_to_tracker<T = unknown>(
     input: ToolInputs["add_list_to_tracker"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * What changed in search.
+   *
+   * Two periods of Google search compared, by query or by page: what is new (shown now, not at all before), what was lost, and the biggest gainers and losers by clicks. Answers 'which queries did we start ranking for', 'what did we lose this week' and 'which pages are growing'. brand narrows to branded or non-branded queries (non-branded is what SEO work moves); country and device segment it. Periods end on the newest day Google has finished counting. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  get_search_changes<T = unknown>(
+    input: ToolInputs["get_search_changes"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Branded vs non-branded search.
+   *
+   * Google search clicks and impressions split into branded (the query names the client) and non-branded, by day, week or month, with the property total and the anonymised remainder Google withholds queries for. Answers 'is non-branded traffic growing' — the number content and SEO work actually move. Brand terms come from the client brief (update_client_brief brandTerms), or the client's name and domain. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  get_brand_split<T = unknown>(
+    input: ToolInputs["get_brand_split"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Queries answered by a different page.
+   *
+   * Queries where Google now sends searchers to a different page of the site than in the previous period, with both pages and their clicks. Answers 'is Google confused about which page to rank' — a swap is usually two pages competing (merge them or fix internal links) or a new page taking over. Every Search Console query, not only tracked keywords (get_url_swaps covers those). Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  get_query_page_swaps<T = unknown>(
+    input: ToolInputs["get_query_page_swaps"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Search traffic by section.
+   *
+   * Google search clicks, impressions and position rolled up by section of the site, two periods compared. Answers 'how is the blog doing against the guides' and 'which template is losing traffic'. groups are matched in order against each page's path, first match wins (* matches anything, so '/blog/*'); without groups, pages are grouped by their first path segment. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  get_content_groups<T = unknown>(
+    input: ToolInputs["get_content_groups"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Search traffic by result kind.
+   *
+   * Google web search clicks and impressions by search appearance — rich results, videos, FAQ and review snippets, AMP and the other result kinds Search Console reports — two periods compared. Answers 'are our rich results earning clicks' and 'did we lose a result type'. Collected from the day this was added, and back sixteen months once a connection's history has been filled. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  get_search_appearance<T = unknown>(
+    input: ToolInputs["get_search_appearance"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Search traffic with what happened.
+   *
+   * Daily Google web search clicks and impressions (and non-branded clicks) beside the client's timeline: deploys, publishes, campaigns and notes, and Google's algorithm updates. Answers 'what caused this drop' and 'did the release help'. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  get_search_timeline<T = unknown>(
+    input: ToolInputs["get_search_timeline"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Note something on the client's timeline.
+   *
+   * Records something that happened on a day — a deploy, a page published or rewritten, a campaign, a technical change, a note — so traffic charts and get_search_timeline can be read as cause and effect. Answers 'remember that we shipped this today'. Deploy hooks note their runs on their own. Free.
+   *
+   * Requires `data:write`. Client-scoped, changes state; not retried on 5xx.
+   */
+  add_annotation<T = unknown>(
+    input: ToolInputs["add_annotation"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * List the client's timeline.
+   *
+   * The client's timeline notes between two days, oldest first, with Google's algorithm updates when includeGoogle is true. Answers 'what changed around then'. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  list_annotations<T = unknown>(
+    input: ToolInputs["list_annotations"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Remove timeline notes.
+   *
+   * Removes the client's timeline notes by id; unknown ids are ignored. Answers 'take that note off'. Google's updates cannot be removed. Free.
+   *
+   * Requires `data:write`. Client-scoped, changes state; not retried on 5xx.
+   */
+  remove_annotations<T = unknown>(
+    input: ToolInputs["remove_annotations"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * What the ranking pages have in common.
+   *
+   * Reads the top Google results for a keyword and each ranking page, and reports what they share: word count range, the outline themes most of them cover, the terms they use and how often, the questions they answer, tables, lists, images, video, schema types, reading ease and how recently they were updated — plus People Also Ask and related searches, and each page's own summary. Answers 'what does it take to rank for this'. The results page is a paid lookup on the client's account unless someone bought it in the last day (spend says which); the pages are fetched free.
+   *
+   * Requires `spend:incur`. Client-scoped, changes state; not retried on 5xx.
+   */
+  get_serp_content_profile<T = unknown>(
+    input: ToolInputs["get_serp_content_profile"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Build a content brief.
+   *
+   * A writer's brief for a keyword (or a cluster: the keyword plus relatedKeywords), built from the pages that rank: search intent and the format that wins (list, how-to, comparison, review, landing page, article), target length, the outline to cover, must-cover and nice-to-have terms, questions to answer (People Also Ask and the ranking pages'), structure and schema to include, the client's own pages to link to and from, and each competing page with what it misses. Answers 'brief me on this keyword' and 'what should this post cover'. save: true keeps it as a research note on the client brief. Same cost as get_serp_content_profile.
+   *
+   * Requires `spend:incur`. Client-scoped, changes state; not retried on 5xx.
+   */
+  build_content_brief<T = unknown>(
+    input: ToolInputs["build_content_brief"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Score a draft before publishing.
+   *
+   * Scores a draft (a URL, HTML or Markdown) 0–100 against the pages that rank for its keyword: term coverage, outline coverage, questions answered, length and structure — with the missing terms (and how often to use them), missing sections, unanswered questions and a fix list, most important first. Answers 'is this ready to publish' and 'what should I add'. Run it after each revision until it is at par with the results page. Same cost as get_serp_content_profile; a results page bought for the brief is reused free for a day.
+   *
+   * Requires `spend:incur`. Client-scoped, changes state; not retried on 5xx.
+   */
+  score_content<T = unknown>(
+    input: ToolInputs["score_content"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Group keywords into topics.
+   *
+   * Groups keywords into topics by how much their Google results overlap: keywords whose top results share at least minShared pages are one topic, which one page should target. Each topic has its parent topic (the highest-volume keyword), total volume, intent, the pages that rank across it, and where the client already ranks. Answers 'which of these keywords belong on one page' and 'how many pages do we need'. Give keywords (up to 200) or a keyword listId. One results page per keyword, each a paid lookup on the client's account unless someone bought it in the last day — quote with estimate_cost first.
+   *
+   * Requires `spend:incur`. Client-scoped, changes state; not retried on 5xx.
+   */
+  cluster_keywords<T = unknown>(
+    input: ToolInputs["cluster_keywords"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Map topics to pages.
+   *
+   * The client's topics from Search Console (non-branded queries, optionally containing a seed) plus any extra keywords, grouped into clusters and pillars, each mapped to the pages Google shows for it: no_page (write it), one_page, or several_pages (impressions split between pages — merge or fix internal links). Answers 'what should we write next', 'which topics have no page' and 'where are our pages competing'. method serp_overlap clusters by results-page overlap (one paid lookup per keyword unless bought in the last day); search_console clusters by the page each query lands on, free.
+   *
+   * Requires `spend:incur`. Client-scoped, changes state; not retried on 5xx.
+   */
+  get_topic_map<T = unknown>(
+    input: ToolInputs["get_topic_map"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * What changed since the last crawl.
+   *
+   * Compares a crawl's issues with the crawl before it (or againstCrawlId), page by page: issues that are new, issues that were fixed, and rules that got worse or better, with sample pages — plus pages added, removed and changed. Answers 'did the fixes work', 'what broke this week' and 'what should the weekly audit report'. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  compare_crawls<T = unknown>(
+    input: ToolInputs["compare_crawls"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Issues by template.
+   *
+   * Groups each issue's pages by URL template (ids, slugs with numbers and query values replaced by *), so '62 pages of /community/es/u/*?sort=*' reads as one fix on one template. Answers 'how many fixes is this really' and 'which template causes this'. ruleId narrows to one issue. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  get_issue_templates<T = unknown>(
+    input: ToolInputs["get_issue_templates"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * URL parameters and crawl waste.
+   *
+   * Every query parameter the crawl met — sort orders, filters, tracking, pagination — with how many pages carry it, how many of those are canonicalised to another page (crawl waste), their issues, and whether to strip it from crawls (set_crawl_settings stripParams), keep it, or review it. Answers 'why is the crawl full of ?sort= pages'. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  get_parameter_report<T = unknown>(
+    input: ToolInputs["get_parameter_report"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * How the site is crawled.
+   *
+   * The client's crawl settings: query parameters stripped from discovered URLs, custom extraction rules, and JavaScript rendering (off, shells — only pages that look unrendered — or all, up to renderMaxPages a crawl). Answers 'what does the crawl do differently for this site'. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  get_crawl_settings<T = unknown>(
+    input: ToolInputs["get_crawl_settings"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Change how the site is crawled.
+   *
+   * Changes the client's crawl settings for the next crawl; fields left out are kept. stripParams removes query parameters from every discovered URL (names, or prefixes like utm_*), so sorted and filtered copies of a page are crawled once. extractions reads values off every page (up to 10): css (a selector, optionally an attribute), regex (first group), jsonld ('Article.datePublished') or meta (a name or property) — see get_extraction_results. render runs JavaScript: off, shells (pages that look unrendered) or all, capped at renderMaxPages. Answers 'crawl this site this way'. Free.
+   *
+   * Requires `project:manage`. Client-scoped, changes state; not retried on 5xx.
+   */
+  set_crawl_settings<T = unknown>(
+    input: ToolInputs["set_crawl_settings"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Everything the crawl read on a page.
+   *
+   * One crawled page in full: its H2/H3 outline, word count, published and modified dates, structured data as written, custom extraction values, the addresses that redirect to it, what JavaScript changed when it was rendered, and its place in the link graph (inlinks, outlinks, click depth, internal PageRank, anchors). Answers 'what does the crawler see on this page'. Use get_page_issues for its issues. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  get_page_details<T = unknown>(
+    input: ToolInputs["get_page_details"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Custom extraction results.
+   *
+   * The values custom extraction (set_crawl_settings extractions) read off each page in a crawl, page by page; name narrows to one rule. Answers 'which pages have no author', 'what price does each product page show' and 'which posts are older than X'. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  get_extraction_results<T = unknown>(
+    input: ToolInputs["get_extraction_results"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * What JavaScript changes.
+   *
+   * Pages the crawl rendered with JavaScript, compared with their raw HTML: words and links that exist only after JavaScript runs, and a title, canonical, meta robots, H1, description or structured data that JavaScript changes — what a search engine or an AI crawler that does not run scripts never sees. Answers 'does our content depend on JavaScript'. Turn rendering on with set_crawl_settings render. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  get_rendering_report<T = unknown>(
+    input: ToolInputs["get_rendering_report"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * The internal link graph.
+   *
+   * Every crawled page with its internal inlinks and outlinks, clicks from the home page, internal PageRank (0–100), and the anchors it is linked with — plus orphans (indexable pages nothing links to), pages unreachable from the home page, and pages more than three clicks deep. Links that redirect are followed to the page they land on; nofollow links do not count. Answers 'which pages are buried', 'what holds our internal authority' and 'which pages are orphaned'. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  get_internal_link_graph<T = unknown>(
+    input: ToolInputs["get_internal_link_graph"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Suggest internal links.
+   *
+   * Pages that already mention a topic in their text but do not link to the page about it, with the exact sentence and the words to use as the anchor, strongest linking pages first. Give targetUrl (and phrases, default: its title and H1 and the queries it ranks for); without a target, it picks the client's pages in striking distance in Search Console (positions 4–20) — where an internal link moves rankings most. Answers 'where should we add internal links'. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  suggest_internal_links<T = unknown>(
+    input: ToolInputs["suggest_internal_links"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * One anchor, several pages.
+   *
+   * Descriptive anchor texts used for links to more than one page — the site telling search engines that two pages are about the same words, which splits their ranking (cannibalization through links). Generic anchors (read more, click here) are left out. Answers 'are our internal links confusing Google'. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  get_anchor_overlap<T = unknown>(
+    input: ToolInputs["get_anchor_overlap"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Conversions by landing page and source.
+   *
+   * Conversions (sign-ups, purchases, any goal) by the page a visit landed on, its source or its referrer, with visits, converting visits, conversion rate and value — and, by landing page, the Search Console queries that bring those visits. Answers 'which pages and queries actually make money' and 'what is organic search worth'. source web_analytics uses the cookieless analytics' custom events (goals: the event names; default every event; value from a 'value' property); ga4 uses GA4's key events on organic sessions. channel narrows to search engines or AI assistants. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  get_conversions<T = unknown>(
+    input: ToolInputs["get_conversions"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * The events a site sends.
+   *
+   * The custom events the client's site sends to the cookieless analytics, most-sent first, with how many carry a value — the goals get_conversions can count. Answers 'what are we tracking'. Says how to send one when there are none. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  list_conversion_goals<T = unknown>(
+    input: ToolInputs["list_conversion_goals"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Referring domains.
+   *
+   * The domains linking to a domain (the client's or any competitor's), with how many links each sends, whether they follow, the linking domain's authority (0–100) and when the links were first and last seen. Answers 'who links to us', 'who links to them' and 'which sites are worth asking'. source vendor (and auto, when a provider is connected) is a paid lookup on the client's account unless anyone bought it in the last week; index is free.
+   *
+   * Requires `spend:incur`. Client-scoped, changes state; not retried on 5xx.
+   */
+  get_referring_domains<T = unknown>(
+    input: ToolInputs["get_referring_domains"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Backlinks, new and lost.
+   *
+   * The links to a domain, page to page, with anchor and follow status; mode new lists links first seen in the last days, lost those no longer seen since. Answers 'which links did we gain or lose this month' and 'what links does this competitor have'. source vendor (and auto, when a provider is connected) is a paid lookup on the client's account unless anyone bought it in the last week; index is free.
+   *
+   * Requires `spend:incur`. Client-scoped, changes state; not retried on 5xx.
+   */
+  get_backlinks<T = unknown>(
+    input: ToolInputs["get_backlinks"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Anchor text mix.
+   *
+   * The anchor texts a domain is linked with, each classed as branded, a bare URL, generic (click here, read more), empty (images) or other (usually keyword-rich), and the mix by referring domains. Answers 'does our link profile look natural' and 'what do they rank with'. source vendor (and auto, when a provider is connected) is a paid lookup on the client's account unless anyone bought it in the last week; index is free.
+   *
+   * Requires `spend:incur`. Client-scoped, changes state; not retried on 5xx.
+   */
+  get_anchor_distribution<T = unknown>(
+    input: ToolInputs["get_anchor_distribution"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Pages that attract links.
+   *
+   * A domain's pages by how many domains link to them. Run it on competitors to see what kind of content earns links in a niche — the content worth making. Answers 'what do people link to'. source vendor (and auto, when a provider is connected) is a paid lookup on the client's account unless anyone bought it in the last week; index is free.
+   *
+   * Requires `spend:incur`. Client-scoped, changes state; not retried on 5xx.
+   */
+  get_best_pages_by_links<T = unknown>(
+    input: ToolInputs["get_best_pages_by_links"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Links to broken pages.
+   *
+   * Links from other sites to the client's pages that no longer work (4xx, or not answering), grouped by page, with the closest live page to redirect each to — links already earned, reclaimed with one redirect. Answers 'which links are we wasting'. Status comes from the latest crawl, and pages it did not crawl are checked. source vendor (and auto, when a provider is connected) is a paid lookup on the client's account unless anyone bought it in the last week; index is free.
+   *
+   * Requires `spend:incur`. Client-scoped, changes state; not retried on 5xx.
+   */
+  get_broken_backlinks<T = unknown>(
+    input: ToolInputs["get_broken_backlinks"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * What competitors published.
+   *
+   * New and updated pages on competitors' sites, from their sitemaps (read daily for every competitor a tracker watches, and read now for any not yet watched), grouped by section — 'competitor X published 14 pages under /guides this week'. Answers 'what are they writing about' and 'what did they just launch'. competitors overrides the tracked ones. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  get_competitor_new_pages<T = unknown>(
+    input: ToolInputs["get_competitor_new_pages"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Changes to pages that outrank us.
+   *
+   * Pages that rank above the client for its tracked keywords whose title, H1, length or sections changed — read from snapshots taken every few days. Answers 'what did the page that beat us change'. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  get_competitor_page_changes<T = unknown>(
+    input: ToolInputs["get_competitor_page_changes"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * How much the results are moving.
+   *
+   * How much page one moved between readings for each tracked keyword (0 still, ~10 turned over), a daily index for the client's keywords beside an industry-wide one from every keyword in the archive, and Google's updates in the window. Answers 'is it us or is it Google' when rankings move. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  get_serp_volatility<T = unknown>(
+    input: ToolInputs["get_serp_volatility"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Who the AI Overview cites.
+   *
+   * For each tracked keyword: how often Google showed an AI Overview (or a featured snippet, or People Also Ask — feature), whether the client is cited, who is, and how that changed; plus the domains cited most across the keywords — the outreach and content targets. Answers 'are we in the AI Overview' and 'who does Google trust on this topic'. From the results pages already captured; free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  get_ai_overview_citations<T = unknown>(
+    input: ToolInputs["get_ai_overview_citations"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * What can be queried.
+   *
+   * The datasets query_data and export_data read — Search Console (every day kept), cookieless analytics events, crawl pages, issues and links, rank captures, backlinks — with their columns, metrics and time column. Answers 'what data is there to ask about'. Free.
+   *
+   * Requires `data:read`. Agency-wide, read-only.
+   */
+  describe_datasets<T = unknown>(
+    input?: ToolInputs["describe_datasets"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Query the stored data.
+   *
+   * Asks any question of a client's stored data the other tools do not answer: pick a dataset (describe_datasets), group by dimensions, compute metrics (count, sum(col), avg(col), min, max, uniq, plus ctr and position for Search Console, visitors and visits for analytics), filter (eq, neq, contains, starts_with, gt, lt, in, regex), order and limit — or list rows with columns. Answers 'which queries containing X lost clicks on mobile in Spain', 'how many 404s per template'. Read-only and always limited to the client's own data. Up to 10,000 rows; export_data for more. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  query_data<T = unknown>(
+    input: ToolInputs["query_data"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Export stored data to a file.
+   *
+   * The same query as query_data, written to a file — CSV, JSON lines or Parquet, up to a million rows — with a download link valid for 24 hours, for BigQuery, a notebook or a spreadsheet. Answers 'give me all of our Search Console history' and 'export the crawl'. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  export_data<T = unknown>(
+    input: ToolInputs["export_data"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Demand for every combination.
+   *
+   * Search volume, difficulty and CPC for every combination of a pattern's slots — 'receive sms {service} {country}' with services and countries — up to 500, with the client's ranking page and position for each from Search Console and a verdict: write (demand, no page), improve (a page beyond the top ten), have (top ten) or skip (no demand). Answers 'which of these template pages deserve to exist'. Volumes any agency bought before are reused free; the rest is a paid keyword lookup on the client's account, in batches.
+   *
+   * Requires `spend:incur`. Client-scoped, changes state; not retried on 5xx.
+   */
+  get_demand_matrix<T = unknown>(
+    input: ToolInputs["get_demand_matrix"],
     options?: CallOptions,
   ): Promise<T>;
 
