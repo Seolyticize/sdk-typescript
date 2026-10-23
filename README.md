@@ -10,11 +10,10 @@ have.
 ## Install
 
 ```sh
-npm install github:Seolyticize/sdk-typescript
-# or: pnpm add github:Seolyticize/sdk-typescript · yarn add github:Seolyticize/sdk-typescript
+npm install @seolyticize/sdk
 ```
 
-It builds on install. Python: [sdk-python](https://github.com/Seolyticize/sdk-python) · Go: [sdk-go](https://github.com/Seolyticize/sdk-go)
+Python: [sdk-python](https://github.com/Seolyticize/sdk-python) · Go: [sdk-go](https://github.com/Seolyticize/sdk-go)
 
 ## Get a key
 
