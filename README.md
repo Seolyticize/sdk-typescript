@@ -1,7 +1,7 @@
 # @seolyticize/sdk
 
-A typed TypeScript client for the Seolyticize API. Every tool the platform exposes — 302 of
-them in this release — is a method, and the types come straight from the registry that validates the calls — so the
+A typed TypeScript client for the Seolyticize API. Every tool the platform exposes — about 500
+in this release — is a method, and the types come straight from the registry that validates the calls — so the
 SDK cannot describe a tool differently from how the server runs it.
 
 No runtime dependencies: it needs `fetch`, which Node 18+, Deno, Bun and browsers all

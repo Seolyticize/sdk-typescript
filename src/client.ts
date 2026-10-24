@@ -15,7 +15,7 @@ import type { Discovery } from "./types.js";
 export const DEFAULT_BASE_URL = "https://seolyticize.com";
 
 /** The SDK's own version, sent as the user agent so a support ticket can name it. */
-export const SDK_VERSION = "0.3.0";
+export const SDK_VERSION = "0.4.0";
 
 export type FetchLike = (url: string, init: RequestInit) => Promise<Response>;
 
