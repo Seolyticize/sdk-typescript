@@ -15,7 +15,7 @@ import type { Discovery } from "./types.js";
 export const DEFAULT_BASE_URL = "https://seolyticize.com";
 
 /** The SDK's own version, sent as the user agent so a support ticket can name it. */
-export const SDK_VERSION = "0.2.0";
+export const SDK_VERSION = "0.3.0";
 
 export type FetchLike = (url: string, init: RequestInit) => Promise<Response>;
 
@@ -43,6 +43,26 @@ export type ClientOptions = {
 export type CallOptions = {
   /** Aborts the call, including any wait between retries. */
   signal?: AbortSignal;
+  /**
+   * Sent as Idempotency-Key, so a retry is answered from the first answer.
+   * Writes get one of their own by default, kept across every retry of the
+   * call; pass one to make a retry across processes safe as well.
+   */
+  idempotencyKey?: string;
+};
+
+/** What the server sends beside every answer: cost, cache, freshness, completeness, next calls. */
+export type ResponseMeta = {
+  requestId: string | null;
+  costMicros: number;
+  cached: boolean;
+  cachedFrom: string | null;
+  dataAsOf: string | null;
+  sources: string[];
+  partial: boolean;
+  next: Array<{ tool: string; args: Record<string, unknown>; why: string }>;
+  nextCursor: string | null;
+  dryRun?: true;
 };
 
 /**
@@ -53,7 +73,12 @@ export type CallOptions = {
  * sent the report before failing to say so, and repeating a write would do it
  * twice. Only calls known to be reads are retried on those.
  */
-type RetryPolicy = "rate-limit-only" | "transient";
+/**
+ * "idempotent" is a write sent with an Idempotency-Key: retried when the
+ * connection dropped (the server either never saw it or kept its answer for
+ * the key), never after a 5xx, which may come after the work was done.
+ */
+type RetryPolicy = "rate-limit-only" | "transient" | "idempotent";
 
 export type SeolyticizeClient = {
   /** Calls any tool by name. Typed for tools this SDK knows; open for newer ones. */
@@ -63,6 +88,17 @@ export type SeolyticizeClient = {
     options?: CallOptions,
   ): Promise<T>;
   call<T = unknown>(name: string, input?: unknown, options?: CallOptions): Promise<T>;
+  /** The same call, with the meta the server sends beside the data: cost, cache, freshness, next calls. */
+  callWithMeta<N extends ToolName, T = unknown>(
+    name: N,
+    input: ToolInputs[N],
+    options?: CallOptions,
+  ): Promise<{ data: T; meta: ResponseMeta | null }>;
+  callWithMeta<T = unknown>(
+    name: string,
+    input?: unknown,
+    options?: CallOptions,
+  ): Promise<{ data: T; meta: ResponseMeta | null }>;
   /** The catalogue as this key sees it, and who the key is. */
   listTools(options?: CallOptions): Promise<Discovery>;
   /** One typed method per tool known when this SDK was generated. */
@@ -163,6 +199,7 @@ export function createClient(options: ClientOptions): SeolyticizeClient {
     path: string,
     body: unknown,
     signal: AbortSignal | undefined,
+    idempotencyKey?: string,
   ): Promise<Response> {
     const timeout = AbortSignal.timeout(timeoutMs);
     const init: RequestInit = {
@@ -172,6 +209,7 @@ export function createClient(options: ClientOptions): SeolyticizeClient {
         accept: "application/json",
         "user-agent": `seolyticize-sdk/${SDK_VERSION}`,
         ...(method === "POST" ? { "content-type": "application/json" } : {}),
+        ...(idempotencyKey ? { "idempotency-key": idempotencyKey } : {}),
       },
       signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
     };
@@ -191,11 +229,17 @@ export function createClient(options: ClientOptions): SeolyticizeClient {
       const canRetry = tries < maxRetries;
       let response: Response;
       try {
-        response = await attempt(method, path, body, callOptions?.signal);
+        response = await attempt(
+          method,
+          path,
+          body,
+          callOptions?.signal,
+          callOptions?.idempotencyKey,
+        );
       } catch (cause) {
         // A caller's own abort is an instruction, not a fault to retry past.
         if (callOptions?.signal?.aborted) throw cause;
-        if (policy === "transient" && canRetry) {
+        if ((policy === "transient" || policy === "idempotent") && canRetry) {
           await sleep(backoffMs(tries));
           continue;
         }
@@ -240,20 +284,37 @@ export function createClient(options: ClientOptions): SeolyticizeClient {
     }
   }
 
-  async function call<T>(name: string, input?: unknown, callOptions?: CallOptions) {
+  async function callWithMeta<T>(
+    name: string,
+    input?: unknown,
+    callOptions?: CallOptions,
+  ) {
     // A tool this SDK has never heard of may be a read or a write; it is
     // treated as a write, because guessing wrong the other way repeats a write.
-    const meta = (toolMeta as Record<string, { readOnly: boolean } | undefined>)[name];
-    const policy: RetryPolicy = meta?.readOnly ? "transient" : "rate-limit-only";
-    const envelope = await request<{ data: T }>(
+    const known = (toolMeta as Record<string, { readOnly: boolean } | undefined>)[name];
+    // A write carries an idempotency key held across its retries, so the
+    // server answers a repeat from the first answer — which makes retrying a
+    // write after a dropped connection as safe as retrying a read.
+    const idempotencyKey =
+      callOptions?.idempotencyKey ?? (known?.readOnly ? undefined : crypto.randomUUID());
+    const policy: RetryPolicy = known?.readOnly
+      ? "transient"
+      : idempotencyKey !== undefined
+        ? "idempotent"
+        : "rate-limit-only";
+    const envelope = await request<{ data: T; meta?: ResponseMeta }>(
       "POST",
       `/api/v1/tools/${encodeURIComponent(name)}`,
       input ?? {},
       policy,
       name,
-      callOptions,
+      idempotencyKey === undefined ? callOptions : { ...callOptions, idempotencyKey },
     );
-    return envelope.data;
+    return { data: envelope.data, meta: envelope.meta ?? null };
+  }
+
+  async function call<T>(name: string, input?: unknown, callOptions?: CallOptions) {
+    return (await callWithMeta<T>(name, input, callOptions)).data;
   }
 
   const tools = Object.fromEntries(
@@ -265,6 +326,7 @@ export function createClient(options: ClientOptions): SeolyticizeClient {
 
   return {
     call: call as SeolyticizeClient["call"],
+    callWithMeta: callWithMeta as SeolyticizeClient["callWithMeta"],
     listTools: (callOptions) =>
       request<Discovery>(
         "GET",

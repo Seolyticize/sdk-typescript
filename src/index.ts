@@ -2,6 +2,7 @@ export { createClient, DEFAULT_BASE_URL, SDK_VERSION } from "./client.js";
 export type {
   ClientOptions,
   CallOptions,
+  ResponseMeta,
   FetchLike,
   SeolyticizeClient,
 } from "./client.js";

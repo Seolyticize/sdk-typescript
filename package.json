@@ -1,6 +1,6 @@
 {
   "name": "@seolyticize/sdk",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Typed client for the Seolyticize API: every tool, generated from the registry that runs it.",
   "type": "module",
   "license": "MIT",

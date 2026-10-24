@@ -1,7 +1,7 @@
 # @seolyticize/sdk
 
-A typed TypeScript client for the Seolyticize API. Every tool the platform exposes is a
-method, and the types come straight from the registry that validates the calls — so the
+A typed TypeScript client for the Seolyticize API. Every tool the platform exposes — 302 of
+them in this release — is a method, and the types come straight from the registry that validates the calls — so the
 SDK cannot describe a tool differently from how the server runs it.
 
 No runtime dependencies: it needs `fetch`, which Node 18+, Deno, Bun and browsers all
@@ -37,6 +37,41 @@ const { clients } = await seo.tools.list_clients<{
 const summary = await seo.tools.get_rank_summary({
   clientId: clients[0]!.id,
   trackerId: "tracker_123",
+});
+```
+
+### Paid research, within a quote
+
+Tools that buy data (research on any domain, the AI answer index, Maps, AI Mode) take
+`maxCostMicros`. Quote the exact call first and pass the quote as the limit, so it is refused
+rather than run if it would cost more:
+
+```ts
+const args = {
+  clientId: "client_123",
+  target: "rival.com/blog/",
+  change: "new" as const,
+};
+const { estimatedMaxMicros } = await seo.tools.estimate_cost<{
+  estimatedMaxMicros: number;
+}>({
+  tool: "get_ranked_keywords",
+  arguments: args,
+});
+const ranked = await seo.tools.get_ranked_keywords({
+  ...args,
+  maxCostMicros: estimatedMaxMicros,
+});
+
+// Free reads over what is already stored:
+const landing = await seo.tools.get_landing_pages({
+  clientId: "client_123",
+  trackerId: "tracker_123",
+});
+const redirects = await seo.tools.plan_redirect_map({
+  clientId: "client_123",
+  oldCrawlId: "crawl_before_migration",
+  format: "htaccess",
 });
 ```
 
