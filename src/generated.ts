@@ -10,7 +10,10 @@ import type { ToolMeta } from "./types.js";
 /** Every tool's input, as the caller writes it — defaulted fields are optional. */
 export interface ToolInputs {
   /** Input for list_clients: List clients. */
-  list_clients: Record<string, never>;
+  list_clients: {
+    /** Constraints: min length 3, max length 253. */
+    domain?: string;
+  };
   /** Input for get_rank_summary: Get rank summary. */
   get_rank_summary: {
     /** Constraints: min length 1. */
@@ -626,6 +629,8 @@ export interface ToolInputs {
     }>;
     /** Constraints: max items 100. */
     remove?: string[];
+    /** True to do nothing and get back exactly what the call would do: the rows it would write, the addresses it would submit, the emails it would send. Defaults to false. */
+    dryRun?: boolean;
     /** Replaces the brand terms: what people type when already looking for this business (its name, products, misspellings). Search Console splits branded from non-branded queries with them. [] goes back to the client's name and domain. Constraints: max items 50. */
     brandTerms?: string[];
   };
@@ -851,6 +856,8 @@ export interface ToolInputs {
     /** Constraints: min length 1. */
     clientId: string;
   };
+  /** Input for get_collect_contract: How events are collected. */
+  get_collect_contract: Record<string, never>;
   /** Input for set_up_web_analytics: Set up web analytics. */
   set_up_web_analytics: {
     /** Constraints: min length 1. */
@@ -859,8 +866,17 @@ export interface ToolInputs {
     hostnames?: string[];
     /** Paths never recorded, enforced on the server whatever the snippet says: ["/app/*", "/verify", "/reset"]. "*" matches anything. Replaces the list; [] clears it. Constraints: max items 50. */
     excludePaths?: string[];
-    /** When set, only these paths are recorded: ["/", "/blog/*"]. [] clears it. Constraints: max items 50. */
+    /** When set, only pageviews on these paths are recorded: ["/", "/blog/*"]. A custom event elsewhere (a sign-up that lands in the app) still counts, stored without its path. [] clears it. Constraints: max items 50. */
     includePaths?: string[];
+    /** Paths stored under a template when they fit, so names and ids in a path are never stored and their pages count together: ["/:username/:slug"] stores /ada/intro-call as /:username/:slug. A ":name" segment matches any one segment; when several fit, the one with the most fixed segments wins. Applied after excludePaths. Replaces the list; [] clears it. Constraints: max items 50. */
+    pathTemplates?: string[];
+    /** Third parties serving pages on this site (a docs, blog or forum host) under the same site key. Their events send p: {source: "<name>"}, are kept only on their paths (others are dropped as excluded_by_partner_paths) and are reported with get_web_analytics_breakdown {breakdown: "partners"}: [{name: "forumulate", paths: ["/docs/*", "/blog/*"]}]. Replaces the list; [] clears it. Constraints: max items 10. */
+    partners?: {
+      /** Constraints: pattern ^[a-z0-9_-]{1,40}$. */
+      name: string;
+      /** Constraints: min items 1, max items 50. */
+      paths: string[];
+    }[];
   };
   /** Input for get_web_analytics_summary: Site traffic summary (first-party). */
   get_web_analytics_summary: {
@@ -887,7 +903,8 @@ export interface ToolInputs {
       | "events"
       | "channels"
       | "ai_sources"
-      | "ai_landing_pages";
+      | "ai_landing_pages"
+      | "partners";
     /** The period: the last 7, 30 or 90 days, today included. Defaults to 30. */
     days?: 7 | 30 | 90;
     /** Constraints: min 1, max 100. Defaults to 25. */
@@ -1301,7 +1318,7 @@ export interface ToolInputs {
       | "google_play";
     /** Defaults to "desktop". */
     device?: "desktop" | "mobile" | "both";
-    /** Defaults to "daily". */
+    /** Defaults to "weekly". */
     frequency?: "daily" | "weekly" | "monthly" | "manual";
     /** A DataForSEO location: a country, or a region, county or city (find one with search_locations). Constraints: max 9007199254740991. */
     locationCode?: number;
@@ -1457,7 +1474,7 @@ export interface ToolInputs {
     cooldownHours?: number;
     /** Constraints: max length 2048, format uri. */
     webhookUrl?: string;
-    channel?: "slack" | "webhook" | "email" | "telegram";
+    channel?: "slack" | "webhook" | "discord" | "email" | "telegram";
     /** Constraints: max items 10. */
     emailRecipients?: string[];
     /** Constraints: min length 2, max length 64. */
@@ -1475,7 +1492,7 @@ export interface ToolInputs {
     /** Constraints: min 0, max 720. */
     cooldownHours?: number;
     webhookUrl?: string | null;
-    channel?: "slack" | "webhook" | "email" | "telegram";
+    channel?: "slack" | "webhook" | "discord" | "email" | "telegram";
     /** Constraints: max items 10. */
     emailRecipients?: string[];
     telegramChatId?: string | null;
@@ -1484,6 +1501,13 @@ export interface ToolInputs {
   };
   /** Input for delete_alert_rule: Delete an alert rule. */
   delete_alert_rule: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Constraints: min length 1. */
+    ruleId: string;
+  };
+  /** Input for test_alert_rule: Send a test alert. */
+  test_alert_rule: {
     /** Constraints: min length 1. */
     clientId: string;
     /** Constraints: min length 1. */
@@ -1952,6 +1976,133 @@ export interface ToolInputs {
     keywords?: string[];
     /** file (a page at the site root, the default), meta (a tag in the <head>) or dns (a TXT record, which also covers every subdomain and protocol). Defaults to "file". */
     verification?: "file" | "meta" | "dns";
+    /** How often the client's rank tracker runs once it has keywords: weekly is the default for a new tracker. Applied to an existing client's trackers too. update_rank_tracker changes it later. */
+    trackerFrequency?: "daily" | "weekly" | "monthly" | "manual";
+  };
+  /** Input for apply_manifest: Bring a client to what its repo declares. */
+  apply_manifest: {
+    /** Constraints: min length 3, max length 253. */
+    domain: string;
+    /** Constraints: min length 1, max length 200. */
+    name?: string;
+    framework?:
+      | "nextjs"
+      | "astro"
+      | "remix"
+      | "sveltekit"
+      | "nuxt"
+      | "html"
+      | "wordpress"
+      | "other";
+    /** Defaults to "file". */
+    verification?: "file" | "meta" | "dns";
+    trackerFrequency?: "daily" | "weekly" | "monthly" | "manual";
+    monthlyBudgetUsd?: number | null;
+    /** The share of the budget that alerts (0.8 = 80%). Left as it is when omitted. */
+    budgetAlertAt?: number | null;
+    domainSweep?: boolean;
+    /** Defaults to false. */
+    deployHook?: boolean;
+    brief?: {
+      overview?: string | null;
+      goal?: string | null;
+      positioning?: string | null;
+      audience?: string | null;
+      voice?: string | null;
+      /** Constraints: max items 50. */
+      brandTerms?: string[];
+      /** Constraints: max items 50. */
+      add?: Array<{
+        kind: "competitor" | "key_page" | "section" | "research";
+        /** Constraints: min length 1, max length 200. */
+        title: string;
+        body?: string | null;
+        url?: string | null;
+      }>;
+    };
+    /** set_up_web_analytics arguments; each list replaces the one there. */
+    analytics?: {
+      /** Constraints: min items 1, max items 20. */
+      hostnames?: string[];
+      /** Constraints: max items 50. */
+      includePaths?: string[];
+      /** Constraints: max items 50. */
+      excludePaths?: string[];
+      /** Constraints: max items 50. */
+      pathTemplates?: string[];
+      /** Constraints: max items 10. */
+      partners?: {
+        /** Constraints: min length 1, max length 40. */
+        name: string;
+        /** Constraints: min items 1, max items 50. */
+        paths: string[];
+      }[];
+    };
+    /** set_crawl_settings arguments without clientId, such as {render: "shells", stripParams: ["ref"]}; checked by that tool. */
+    crawl?: {
+      [key: string]: unknown;
+    };
+    /** add_default_alerts arguments: the default alerts, sent here. */
+    alerts?: {
+      channel?: "slack" | "webhook" | "discord" | "email" | "telegram";
+      /** Constraints: max length 2048, format uri. */
+      webhookUrl?: string;
+      /** Constraints: max items 10. */
+      emailRecipients?: string[];
+      /** Constraints: min length 2, max length 64. */
+      telegramChatId?: string;
+      /** Constraints: max items 1. */
+      include?: "page-changes"[];
+    };
+    /** Constraints: max items 100. */
+    facts?: Array<{
+      /** Constraints: min length 2, max length 120. */
+      key: string;
+      /** Constraints: min length 1, max length 500. */
+      value: string;
+      /** Defaults to "other". */
+      category?: "price" | "limit" | "country" | "date" | "contact" | "other";
+      /** Constraints: max items 10. Defaults to []. */
+      terms?: string[];
+      /** Defaults to null. */
+      sourceUrl?: string | null;
+    }>;
+    /** Constraints: max items 50. */
+    goals?: Array<{
+      /** Constraints: min length 1, max length 100. */
+      name: string;
+      kind: "pageview" | "event";
+      /** Constraints: min length 1, max length 300. */
+      match: string;
+      /** Defaults to null. */
+      valueMinor?: number | null;
+    }>;
+    /** Constraints: max items 20. */
+    funnels?: Array<{
+      /** Constraints: min length 1, max length 100. */
+      name: string;
+      /** Constraints: min items 2, max items 8. */
+      steps: Array<{
+        kind: "pageview" | "event";
+        /** Constraints: min length 1, max length 300. */
+        match: string;
+        /** Constraints: max length 100. */
+        label?: string;
+      }>;
+    }>;
+    /** True to do nothing and get back exactly what the call would do: the rows it would write, the addresses it would submit, the emails it would send. Defaults to false. */
+    dryRun?: boolean;
+  };
+  /** Input for move_site: Move a client to a new domain. */
+  move_site: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Constraints: min length 3, max length 253. */
+    newDomain: string;
+    /** Defaults to "file". */
+    verification?: "file" | "meta" | "dns";
+    /** How long events from the old hostnames are still accepted. Constraints: min 0, max 365. Defaults to 30. */
+    overlapDays?: number;
   };
   /** Input for verify_site: Verify a deployed site and finish onboarding. */
   verify_site: {
@@ -1962,6 +2113,21 @@ export interface ToolInputs {
   get_next_steps: {
     /** Constraints: min length 1. */
     clientId: string;
+  };
+  /** Input for bootstrap_keywords: Free keyword ideas for a new site. */
+  bootstrap_keywords: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Constraints: max items 5. Defaults to []. */
+    seeds?: string[];
+    /** Constraints: max items 3. Defaults to []. */
+    competitorDomains?: string[];
+    /** Constraints: max 9007199254740991. Defaults to 2840. */
+    locationCode?: number;
+    /** Constraints: min length 2, max length 8. Defaults to "en". */
+    languageCode?: string;
+    /** Constraints: min 1, max 500. Defaults to 200. */
+    limit?: number;
   };
   /** Input for issue_site_verification: Issue a Google site verification. */
   issue_site_verification: {
@@ -2008,6 +2174,8 @@ export interface ToolInputs {
     clientId: string;
     /** Read this sitemap instead of robots.txt's Sitemap: line or /sitemap.xml. Constraints: max length 2048, format uri. */
     sitemapUrl?: string;
+    /** Make a hook only when the client has none; never rotate one. Defaults to false. */
+    ifMissing?: boolean;
   };
   /** Input for get_deploy_hook: Get the deploy hook's status. */
   get_deploy_hook: {
@@ -2496,6 +2664,8 @@ export interface ToolInputs {
     maxDepth?: number;
     /** Constraints: min 1, max 20000. */
     maxPages?: number;
+    /** True to do nothing and get back exactly what the call would do: the rows it would write, the addresses it would submit, the emails it would send. Defaults to false. */
+    dryRun?: boolean;
   };
   /** Input for set_crawl_auth: Credentials for crawling a staging site. */
   set_crawl_auth: {
@@ -3539,6 +3709,17 @@ export interface ToolInputs {
       /** Defaults to null. */
       sourceUrl?: string | null;
     }>;
+    /** True to do nothing and get back exactly what the call would do: the rows it would write, the addresses it would submit, the emails it would send. Defaults to false. */
+    dryRun?: boolean;
+  };
+  /** Input for import_client_facts: Import the client's facts from a manifest. */
+  import_client_facts: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Constraints: max length 2000, format uri. */
+    url?: string;
+    /** Constraints: max length 200000. */
+    content?: string;
     /** True to do nothing and get back exactly what the call would do: the rows it would write, the addresses it would submit, the emails it would send. Defaults to false. */
     dryRun?: boolean;
   };
@@ -4691,6 +4872,11 @@ export interface ToolInputs {
     /** Constraints: min length 1. */
     clientId: string;
   };
+  /** Input for get_scheduled_work: Every scheduled paid job, with how to pause it. */
+  get_scheduled_work: {
+    /** Constraints: min length 1. */
+    clientId: string;
+  };
   /** Input for create_lead_widget: Create a lead-gen audit widget. */
   create_lead_widget: {
     /** Constraints: min length 1, max length 100. */
@@ -4771,6 +4957,16 @@ export interface ToolInputs {
     /** Default: today. Defaults to null. */
     to?: string | null;
   };
+  /** Input for add_bing_site: Add the site to Bing Webmaster Tools. */
+  add_bing_site: {
+    /** Constraints: min length 1. */
+    clientId: string;
+  };
+  /** Input for verify_bing_site: Verify the site in Bing Webmaster Tools. */
+  verify_bing_site: {
+    /** Constraints: min length 1. */
+    clientId: string;
+  };
   /** Input for submit_bing_urls: Submit pages to Bing. */
   submit_bing_urls: {
     /** Constraints: min length 1. */
@@ -4795,6 +4991,13 @@ export interface ToolInputs {
     clientId: string;
     /** Constraints: max length 2048, format uri. */
     sitemapUrl: string;
+  };
+  /** Input for verify_yandex_host: Add and verify the site in Yandex Webmaster. */
+  verify_yandex_host: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Defaults to "file". */
+    method?: "file" | "meta" | "dns";
   };
   /** Input for get_yandex_indexing: Which pages Yandex has in search. */
   get_yandex_indexing: {
@@ -5662,6 +5865,10 @@ export interface ToolInputs {
     match: string;
     /** Defaults to null. */
     valueMinor?: number | null;
+    /** With "name": a goal of that name already defined the same way is returned as it is (created: false), and one defined differently is replaced, so a provisioning script can run this every time. */
+    upsertBy?: "name";
+    /** True to do nothing and get back exactly what the call would do: the rows it would write, the addresses it would submit, the emails it would send. Defaults to false. */
+    dryRun?: boolean;
   };
   /** Input for list_goals: List conversion goals. */
   list_goals: {
@@ -5689,6 +5896,10 @@ export interface ToolInputs {
       /** Constraints: max length 100. */
       label?: string;
     }>;
+    /** With "name": a funnel of that name with the same steps is returned as it is (created: false), and one with different steps is replaced. */
+    upsertBy?: "name";
+    /** True to do nothing and get back exactly what the call would do: the rows it would write, the addresses it would submit, the emails it would send. Defaults to false. */
+    dryRun?: boolean;
   };
   /** Input for list_funnels: List funnels. */
   list_funnels: {
@@ -6214,6 +6425,15 @@ export interface ToolInputs {
     /** Constraints: min length 1. */
     clientId?: string;
     allClients?: boolean;
+    channel?: "slack" | "webhook" | "discord" | "email" | "telegram";
+    /** Constraints: max length 2048, format uri. */
+    webhookUrl?: string;
+    /** Constraints: max items 10. */
+    emailRecipients?: string[];
+    /** Constraints: min length 2, max length 64. */
+    telegramChatId?: string;
+    /** Constraints: max items 1. */
+    include?: "page-changes"[];
   };
   /** Input for set_crawl_schedule: Set when the site is crawled. */
   set_crawl_schedule: {
@@ -6319,6 +6539,12 @@ export interface ToolInputs {
     clientId: string;
     monthlyUsd?: number | null;
     alertAt?: number | null;
+  };
+  /** Input for set_domain_sweep: Turn the weekly domain refresh on or off. */
+  set_domain_sweep: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    enabled: boolean;
   };
   /** Input for get_job: How a slow job is going. */
   get_job: {
@@ -6436,7 +6662,7 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
   page_lab: { permission: "spend:incur", clientScoped: false, readOnly: false },
   get_entity_pageviews: { permission: "data:read", clientScoped: false, readOnly: true },
   submit_indexnow: { permission: "spend:incur", clientScoped: true, readOnly: false },
-  get_domain_facts: { permission: "data:read", clientScoped: false, readOnly: true },
+  get_domain_facts: { permission: "data:read", clientScoped: false, readOnly: false },
   keyword_explorer: { permission: "spend:incur", clientScoped: true, readOnly: false },
   serp_overview: { permission: "spend:incur", clientScoped: true, readOnly: false },
   keyword_traffic_potential: {
@@ -6555,6 +6781,7 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
     clientScoped: true,
     readOnly: true,
   },
+  get_collect_contract: { permission: "data:read", clientScoped: false, readOnly: true },
   set_up_web_analytics: { permission: "data:write", clientScoped: true, readOnly: false },
   get_web_analytics_summary: {
     permission: "data:read",
@@ -6668,10 +6895,11 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
   create_alert_rule: { permission: "client:manage", clientScoped: true, readOnly: false },
   update_alert_rule: { permission: "client:manage", clientScoped: true, readOnly: false },
   delete_alert_rule: { permission: "client:manage", clientScoped: true, readOnly: false },
+  test_alert_rule: { permission: "client:manage", clientScoped: true, readOnly: false },
   get_vendor_connections: {
     permission: "agency:settings",
     clientScoped: false,
-    readOnly: false,
+    readOnly: true,
   },
   get_client_integrations: {
     permission: "data:read",
@@ -6680,15 +6908,11 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
   },
   get_costs: { permission: "cost:view", clientScoped: false, readOnly: true },
   get_client_costs: { permission: "cost:view", clientScoped: true, readOnly: true },
-  list_api_keys: { permission: "api:manage", clientScoped: false, readOnly: false },
+  list_api_keys: { permission: "api:manage", clientScoped: false, readOnly: true },
   create_api_key: { permission: "api:manage", clientScoped: false, readOnly: false },
   revoke_api_key: { permission: "api:manage", clientScoped: false, readOnly: false },
-  list_api_activity: { permission: "api:manage", clientScoped: false, readOnly: false },
-  list_team_members: {
-    permission: "member:manage",
-    clientScoped: false,
-    readOnly: false,
-  },
+  list_api_activity: { permission: "api:manage", clientScoped: false, readOnly: true },
+  list_team_members: { permission: "member:manage", clientScoped: false, readOnly: true },
   add_team_member: { permission: "member:manage", clientScoped: false, readOnly: false },
   remove_team_member: {
     permission: "member:manage",
@@ -6707,7 +6931,7 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
   },
   get_branding: { permission: "data:read", clientScoped: false, readOnly: true },
   set_branding: { permission: "agency:settings", clientScoped: false, readOnly: false },
-  list_connected_apps: { permission: "api:manage", clientScoped: false, readOnly: false },
+  list_connected_apps: { permission: "api:manage", clientScoped: false, readOnly: true },
   disconnect_app: { permission: "api:manage", clientScoped: false, readOnly: false },
   get_billing: { permission: "data:read", clientScoped: false, readOnly: true },
   get_billing_link: {
@@ -6726,7 +6950,7 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
   sync_local_reviews: { permission: "spend:incur", clientScoped: true, readOnly: false },
   get_local_seo_audit: { permission: "spend:incur", clientScoped: true, readOnly: false },
   get_backlink_audit: { permission: "data:read", clientScoped: true, readOnly: true },
-  get_backlink_health: { permission: "data:read", clientScoped: true, readOnly: true },
+  get_backlink_health: { permission: "data:read", clientScoped: true, readOnly: false },
   get_link_checks: { permission: "data:read", clientScoped: true, readOnly: true },
   recheck_links: { permission: "client:manage", clientScoped: true, readOnly: false },
   get_backlink_spam_scores: {
@@ -6782,7 +7006,7 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
     clientScoped: true,
     readOnly: false,
   },
-  list_portal_links: { permission: "client:manage", clientScoped: true, readOnly: false },
+  list_portal_links: { permission: "client:manage", clientScoped: true, readOnly: true },
   create_portal_link: {
     permission: "client:manage",
     clientScoped: true,
@@ -6794,8 +7018,11 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
     readOnly: false,
   },
   onboard_site: { permission: "client:manage", clientScoped: false, readOnly: false },
+  apply_manifest: { permission: "client:manage", clientScoped: false, readOnly: false },
+  move_site: { permission: "client:manage", clientScoped: true, readOnly: false },
   verify_site: { permission: "client:manage", clientScoped: true, readOnly: false },
   get_next_steps: { permission: "data:read", clientScoped: true, readOnly: true },
+  bootstrap_keywords: { permission: "data:read", clientScoped: true, readOnly: true },
   issue_site_verification: {
     permission: "client:manage",
     clientScoped: true,
@@ -6807,7 +7034,7 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
     readOnly: false,
   },
   create_invite_code: { permission: "api:manage", clientScoped: false, readOnly: false },
-  list_invite_codes: { permission: "api:manage", clientScoped: false, readOnly: false },
+  list_invite_codes: { permission: "api:manage", clientScoped: false, readOnly: true },
   revoke_invite_code: { permission: "api:manage", clientScoped: false, readOnly: false },
   create_deploy_hook: {
     permission: "client:manage",
@@ -7019,6 +7246,7 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
   get_ai_crawler_access: { permission: "data:read", clientScoped: true, readOnly: true },
   check_answer_readiness: { permission: "data:read", clientScoped: true, readOnly: true },
   set_client_facts: { permission: "data:write", clientScoped: true, readOnly: false },
+  import_client_facts: { permission: "data:write", clientScoped: true, readOnly: false },
   list_client_facts: { permission: "data:read", clientScoped: true, readOnly: true },
   remove_client_facts: { permission: "data:write", clientScoped: true, readOnly: false },
   get_llm_responses: { permission: "spend:incur", clientScoped: true, readOnly: false },
@@ -7075,11 +7303,7 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
     clientScoped: false,
     readOnly: false,
   },
-  list_team_invites: {
-    permission: "member:manage",
-    clientScoped: false,
-    readOnly: false,
-  },
+  list_team_invites: { permission: "member:manage", clientScoped: false, readOnly: true },
   resend_team_invite: {
     permission: "member:manage",
     clientScoped: false,
@@ -7159,7 +7383,7 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
   },
   generate_schema: { permission: "data:read", clientScoped: true, readOnly: true },
   generate_llms_txt: { permission: "data:read", clientScoped: true, readOnly: true },
-  get_geo_readiness: { permission: "data:read", clientScoped: true, readOnly: true },
+  get_geo_readiness: { permission: "data:read", clientScoped: true, readOnly: false },
   check_brand_entity: { permission: "data:read", clientScoped: true, readOnly: true },
   get_agent_readiness: { permission: "data:read", clientScoped: true, readOnly: true },
   draft_agent_files: { permission: "data:read", clientScoped: true, readOnly: true },
@@ -7227,10 +7451,11 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
   },
   create_report_link: { permission: "report:send", clientScoped: true, readOnly: false },
   revoke_report_links: { permission: "report:send", clientScoped: true, readOnly: false },
-  list_report_links: { permission: "report:send", clientScoped: false, readOnly: false },
+  list_report_links: { permission: "report:send", clientScoped: false, readOnly: true },
   revoke_report_link: { permission: "report:send", clientScoped: false, readOnly: false },
   get_report_data: { permission: "data:read", clientScoped: true, readOnly: true },
   get_budget_status: { permission: "cost:view", clientScoped: true, readOnly: true },
+  get_scheduled_work: { permission: "cost:view", clientScoped: true, readOnly: true },
   create_lead_widget: {
     permission: "agency:settings",
     clientScoped: false,
@@ -7239,14 +7464,14 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
   list_lead_widgets: {
     permission: "agency:settings",
     clientScoped: false,
-    readOnly: false,
+    readOnly: true,
   },
   update_lead_widget: {
     permission: "agency:settings",
     clientScoped: false,
     readOnly: false,
   },
-  list_leads: { permission: "agency:settings", clientScoped: false, readOnly: false },
+  list_leads: { permission: "agency:settings", clientScoped: false, readOnly: true },
   get_bing_search_stats: { permission: "data:read", clientScoped: true, readOnly: true },
   get_bing_crawl_health: { permission: "data:read", clientScoped: true, readOnly: true },
   get_bing_inbound_links: { permission: "data:read", clientScoped: true, readOnly: true },
@@ -7255,9 +7480,16 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
     clientScoped: true,
     readOnly: true,
   },
+  add_bing_site: { permission: "client:manage", clientScoped: true, readOnly: false },
+  verify_bing_site: { permission: "client:manage", clientScoped: true, readOnly: false },
   submit_bing_urls: { permission: "spend:incur", clientScoped: true, readOnly: false },
   inspect_bing_url: { permission: "data:read", clientScoped: true, readOnly: true },
   submit_bing_sitemap: { permission: "data:write", clientScoped: true, readOnly: false },
+  verify_yandex_host: {
+    permission: "client:manage",
+    clientScoped: true,
+    readOnly: false,
+  },
   get_yandex_indexing: { permission: "data:read", clientScoped: true, readOnly: true },
   get_yandex_external_links: {
     permission: "data:read",
@@ -7316,7 +7548,7 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
     readOnly: true,
   },
   get_link_velocity: { permission: "data:read", clientScoped: true, readOnly: true },
-  get_toxic_link_risk: { permission: "data:read", clientScoped: true, readOnly: true },
+  get_toxic_link_risk: { permission: "data:read", clientScoped: true, readOnly: false },
   save_disavow_file: { permission: "client:manage", clientScoped: true, readOnly: false },
   get_disavow_history: { permission: "data:read", clientScoped: true, readOnly: true },
   get_referring_networks: {
@@ -7480,7 +7712,7 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
   list_task_links: { permission: "data:read", clientScoped: true, readOnly: true },
   get_seo_scorecard: { permission: "data:read", clientScoped: true, readOnly: true },
   audit_page: { permission: "data:read", clientScoped: true, readOnly: true },
-  score_eeat: { permission: "data:read", clientScoped: true, readOnly: true },
+  score_eeat: { permission: "data:read", clientScoped: true, readOnly: false },
   draft_seo_strategy: { permission: "spend:incur", clientScoped: true, readOnly: false },
   get_matomo_report: { permission: "data:read", clientScoped: true, readOnly: true },
   add_default_alerts: {
@@ -7508,15 +7740,16 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
   get_recipe: { permission: "data:read", clientScoped: true, readOnly: true },
   get_price_list: { permission: "data:read", clientScoped: false, readOnly: true },
   set_budget: { permission: "client:manage", clientScoped: true, readOnly: false },
+  set_domain_sweep: { permission: "client:manage", clientScoped: true, readOnly: false },
   get_job: { permission: "data:read", clientScoped: true, readOnly: true },
   wait_for_job: { permission: "data:read", clientScoped: true, readOnly: true },
   create_webhook: { permission: "api:manage", clientScoped: false, readOnly: false },
-  list_webhooks: { permission: "api:manage", clientScoped: false, readOnly: false },
+  list_webhooks: { permission: "api:manage", clientScoped: false, readOnly: true },
   delete_webhook: { permission: "api:manage", clientScoped: false, readOnly: false },
   list_webhook_deliveries: {
     permission: "api:manage",
     clientScoped: false,
-    readOnly: false,
+    readOnly: true,
   },
   replay_webhooks: { permission: "api:manage", clientScoped: false, readOnly: false },
   send_test_event: { permission: "api:manage", clientScoped: false, readOnly: false },
@@ -7529,7 +7762,7 @@ export interface ToolMethods {
   /**
    * List clients.
    *
-   * Lists every client the caller can access. Use this first when a request names a client by name rather than id.
+   * Lists every client the caller can access, each with its site domains. Use this first when a request names a client by name or domain rather than id; domain narrows it to the client whose site is on that domain (www. and the scheme are ignored), which is how a provisioning script checks whether a site is onboarded already.
    *
    * Requires `data:read`. Agency-wide, read-only.
    */
@@ -7828,7 +8061,7 @@ export interface ToolMethods {
    *
    * Registration date and registrar from the registry, position on the Tranco top-sites list, when the Internet Archive first captured it, and the subdomains its certificates have announced, plus topicShift: the homepage's title and description as first archived against today's, crossed with the registration date, as a risk level (high: a different topic on a domain registered again after the archive first saw it, registered recently, or registered five or more years ago — the expired-domain abuse pattern; medium: a changed topic on a registration two to five years old; unknown when either page could not be read; a heuristic). Answers 'how old and how big is this, and what else is on it' and 'was this domain bought and repurposed' for any domain, free and without touching a vendor. Each figure is absent far more often than present, and an absence is never a zero: no registry record, not in the top million, never archived.
    *
-   * Requires `data:read`. Agency-wide, read-only.
+   * Requires `data:read`. Agency-wide, changes state; not retried on 5xx.
    */
   get_domain_facts<T = unknown>(
     input: ToolInputs["get_domain_facts"],
@@ -8426,12 +8659,24 @@ export interface ToolMethods {
   /**
    * Is web analytics installed.
    *
-   * Whether Seolyticize's own cookieless web analytics is set up for a client, with the one-line tracking snippet to install, the hostnames allowed to report, and lastEventAt (null until the first visit is recorded). Answers 'is the tracking script installed' and 'what snippet do I add to the site'. configured is false when no snippet has been created yet. Free.
+   * Whether Seolyticize's own cookieless web analytics is set up for a client, with the one-line tracking snippet to install (it sends the page's origin and path and never its query string, except utm_* campaign tags, nor its fragment), the site key, collectUrl for sending events from your own code (get_collect_contract has the fields and limits), the hostnames allowed to report, and lastEventAt (null until the first visit is recorded). Answers 'is the tracking script installed' and 'what snippet do I add to the site'. configured is false when no snippet has been created yet. Free.
    *
    * Requires `data:read`. Client-scoped, read-only.
    */
   get_web_analytics_setup<T = unknown>(
     input: ToolInputs["get_web_analytics_setup"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * How events are collected.
+   *
+   * The collect endpoint's contract, for a site or app that sends events itself instead of using a.js: the URL, the fields, the limits (body bytes, u length, event name, props), the rate limit, when a visit ends, how single-page apps are counted (no server-side dedupe), what is dropped and how each refusal answers. Answers 'can I send pageviews from my own code' and 'is a repeat pageview counted'. Same for every client. Free.
+   *
+   * Requires `data:read`. Agency-wide, read-only.
+   */
+  get_collect_contract<T = unknown>(
+    input?: ToolInputs["get_collect_contract"],
     options?: CallOptions,
   ): Promise<T>;
 
@@ -8462,7 +8707,7 @@ export interface ToolMethods {
   /**
    * Traffic by page, source, campaign, country or device (first-party).
    *
-   * Lists the top rows of one breakdown from Seolyticize's own web analytics: pages (pageviews), entry_pages and exit_pages (visits), sources and referrers (visits; key null means direct), campaigns (visits, with detail "source / medium"), countries (ISO codes; null means unknown), devices, browsers, os, custom events (event count), channels (visits by channel: AI, Organic Search, Paid Search, Social, Email, Referral, Campaign, Direct), ai_sources (visits from each AI assistant: ChatGPT, Perplexity, Gemini, Copilot, Claude, Google AI Mode and others) or ai_landing_pages (the pages AI assistants send visits to, detail naming the assistant). Each row has key, visitors and count; counts says what count counts, and totalKeys how many rows exist before the limit. Answers 'which pages and sources drive visits'. Refuses with a sentence when web analytics has not been set up for the client. Free.
+   * Lists the top rows of one breakdown from Seolyticize's own web analytics: pages (pageviews), entry_pages and exit_pages (visits), sources and referrers (visits; key null means direct), campaigns (visits, with detail "source / medium"), countries (ISO codes; null means unknown), devices, browsers, os, custom events (event count), channels (visits by channel: AI, Organic Search, Paid Search, Social, Email, Referral, Campaign, Direct), ai_sources (visits from each AI assistant: ChatGPT, Perplexity, Gemini, Copilot, Claude, Google AI Mode and others), ai_landing_pages (the pages AI assistants send visits to, detail naming the assistant) or partners (pageviews by who served the page: "site" for the site's own, or each partner declared with set_up_web_analytics). Each row has key, visitors and count; counts says what count counts, and totalKeys how many rows exist before the limit. Answers 'which pages and sources drive visits'. Refuses with a sentence when web analytics has not been set up for the client. Free.
    *
    * Requires `data:read`. Client-scoped, read-only.
    */
@@ -8759,7 +9004,7 @@ export interface ToolMethods {
   /**
    * Get a client.
    *
-   * One client's settings with its projects, sites and rank trackers. Answers 'what is set up for this client' — use it to find tracker, project and site ids before changing anything.
+   * One client's settings with its projects, sites and rank trackers (each with its frequency: daily, weekly, monthly or manual, set with update_rank_tracker), whether the paid weekly domain sweep runs (domainSweep, set with set_domain_sweep), and the analytics siteKey and collectUrl (null before set_up_web_analytics). Answers 'what is set up for this client' — use it to find tracker, project and site ids before changing anything.
    *
    * Requires `data:read`. Client-scoped, read-only.
    */
@@ -8939,7 +9184,7 @@ export interface ToolMethods {
   /**
    * Start a site audit crawl.
    *
-   * Crawls the client's site now rather than waiting for the schedule. Answers 'audit the site again'. If a crawl is already running it is returned instead of starting a second. Poll get_crawl_status with the crawl id; read results with list_crawl_issues.
+   * Crawls the client's site now rather than waiting for the schedule. Answers 'audit the site again'. status is queued for a new crawl, or running when one already was (returned instead of starting a second). Pass the jobId it returns to wait_for_job (or poll get_crawl_status with the crawl id); read results with list_crawl_issues.
    *
    * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -8975,7 +9220,7 @@ export interface ToolMethods {
   /**
    * List site audit issues.
    *
-   * Technical issues one crawl found, by rule: its readable label, severity, category, how many pages it affects, and howToFix — concrete steps to fix it and check the fix. Lists what to fix. Use crawlId 'latest' for the newest completed crawl. indexableOnly (default true) leaves out findings on pages search engines will not index as themselves — noindexed, not answering 200, or canonicalised elsewhere — except the findings that explain why; pass false to see everything.
+   * Technical issues one crawl found, by rule: its readable label, severity, category, how many pages it affects, and howToFix — concrete steps to fix it and check the fix. Lists what to fix; list_issue_pages with a ruleId gives the pages themselves, each with what was found on it. Use crawlId 'latest' for the newest completed crawl. indexableOnly (default true) leaves out findings on pages search engines will not index as themselves — noindexed, not answering 200, or canonicalised elsewhere — except the findings that explain why; pass false to see everything.
    *
    * Requires `data:read`. Client-scoped, read-only.
    */
@@ -9035,7 +9280,7 @@ export interface ToolMethods {
   /**
    * Create an alert rule.
    *
-   * Raises an alert when a client's rankings, traffic, issues or backlinks cross a threshold, or the site goes down, and delivers it by channel. Threshold by kind: rank-drop positions fallen; traffic-drop percent lost; new-critical-issues and backlinks-lost a count; serp-features features lost (or won); competitor-new-pages new pages one tracked competitor's sitemap gained; page-changes own pages whose title, meta description, H1 or canonical changed, went noindex or 404 between the last two audits; ai-mention-drop percentage points the client's AI mention or citation rate fell from the previous check; competitor-new-keywords tracked keywords one competitor started ranking for; web-mentions new pages our crawl found naming the brand; link-velocity referring domains gained or lost in one day, far above that domain's own baseline, for the client or a tracked competitor. The watch kinds look back to their last firing (a week at most) and stay silent until there is something to compare. Channels: slack (webhookUrl, Slack's format; the default), webhook (webhookUrl, plain JSON), email (emailRecipients, up to ten) or telegram (telegramChatId, with the agency's bot from Settings). Webhooks must be https and public. With no channel and no destination, the alert goes to the agency owner's email and deliveryNote says so; a channel named without its field is refused as no_delivery_target. paidSource (competitor-new-keywords and web-mentions only; off by default; needs spend permission) also buys the signal from DataForSEO on every sweep: for competitor-new-keywords, Labs ranked keywords each tracker competitor (up to 5) newly ranks for at the tracker's market, not only tracked keywords; for web-mentions, pages DataForSEO's content index first saw naming the brand, off the client's own domains. The sweep is hourly but a purchase is reused from the archive while fresh, so it buys at most once a week per competitor (once a day for mentions); it is capped by the client's monthly budget, and a failed or over-budget read falls back to the free signal. Quote it first with estimate_cost. Answers 'tell me when rankings drop'.
+   * Raises an alert when a client's rankings, traffic, issues or backlinks cross a threshold, or the site goes down, and delivers it by channel. Threshold by kind: rank-drop positions fallen; traffic-drop percent lost; new-critical-issues and backlinks-lost a count; serp-features features lost (or won); competitor-new-pages new pages one tracked competitor's sitemap gained; page-changes own pages whose title, meta description, H1 or canonical changed, went noindex or 404 between the last two audits; ai-mention-drop percentage points the client's AI mention or citation rate fell from the previous check; competitor-new-keywords tracked keywords one competitor started ranking for; web-mentions new pages our crawl found naming the brand; link-velocity referring domains gained or lost in one day, far above that domain's own baseline, for the client or a tracked competitor. The watch kinds look back to their last firing (a week at most) and stay silent until there is something to compare. Channels: slack (webhookUrl, Slack's format; the default), webhook (webhookUrl, plain JSON), discord (webhookUrl, the channel's Discord webhook as Discord shows it), email (emailRecipients, up to ten) or telegram (telegramChatId, with the agency's bot from Settings). Webhooks must be https and public. With no channel and no destination, the alert goes to the agency owner's email and deliveryNote says so; a channel named without its field is refused as no_delivery_target. paidSource (competitor-new-keywords and web-mentions only; off by default; needs spend permission) also buys the signal from DataForSEO on every sweep: for competitor-new-keywords, Labs ranked keywords each tracker competitor (up to 5) newly ranks for at the tracker's market, not only tracked keywords; for web-mentions, pages DataForSEO's content index first saw naming the brand, off the client's own domains. The sweep is hourly but a purchase is reused from the archive while fresh, so it buys at most once a week per competitor (once a day for mentions); it is capped by the client's monthly budget, and a failed or over-budget read falls back to the free signal. Quote it first with estimate_cost. Answers 'tell me when rankings drop'.
    *
    * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -9069,11 +9314,23 @@ export interface ToolMethods {
   ): Promise<T>;
 
   /**
+   * Send a test alert.
+   *
+   * Sends one test alert down a rule's channel now — Slack, Discord, webhook, email or Telegram — and says whether it was delivered, with the reason when it was not. Answers 'did the Discord alert work'. Nothing is recorded as fired and the cooldown is untouched. Free.
+   *
+   * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
+   */
+  test_alert_rule<T = unknown>(
+    input: ToolInputs["test_alert_rule"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
    * Which vendor accounts are connected.
    *
-   * Which data vendors and AI assistants the agency has connected its own account for, and whether each last checked out. Answers 'why is this data missing' when a vendor was never connected. Never returns any part of a credential.
+   * Which data vendors and AI assistants the agency has connected its own account for, and whether each last checked out. Answers 'why is this data missing' when a vendor was never connected. DataForSEO also gives balanceMicros, the account's balance now, and usable: false when it is 0 or below (it can go negative), when paid calls will fail with vendor_balance_empty even though connected is true. Never returns any part of a credential.
    *
-   * Requires `agency:settings`. Agency-wide, changes state; not retried on 5xx.
+   * Requires `agency:settings`. Agency-wide, read-only.
    */
   get_vendor_connections<T = unknown>(
     input?: ToolInputs["get_vendor_connections"],
@@ -9107,7 +9364,7 @@ export interface ToolMethods {
   /**
    * Vendor spend for one client.
    *
-   * What one client's data cost over recent days, by operation, with request counts. Answers 'what are we paying for on this account'. The budget, what is left of it and a month-end forecast are get_budget_status. Amounts are US dollars.
+   * What one client's data cost over recent days, by operation and by who caused it: surface (rest, mcp-http, web for the app's screens, assistant, or system for scheduled work such as the Sunday domain sweep) and actor (the user or API key, or the workflow), with request counts and the first and last time. Rows from before this was recorded have surface and actor null. Answers 'what are we paying for on this account' and 'who spent this'. The budget, what is left of it and a month-end forecast are get_budget_status. Amounts are US dollars.
    *
    * Requires `cost:view`. Client-scoped, read-only.
    */
@@ -9121,7 +9378,7 @@ export interface ToolMethods {
    *
    * The agency's live API keys with name, role, which client each is pinned to and when it was last used. Lists keys to audit or revoke. Never returns a key.
    *
-   * Requires `api:manage`. Agency-wide, changes state; not retried on 5xx.
+   * Requires `api:manage`. Agency-wide, read-only.
    */
   list_api_keys<T = unknown>(
     input?: ToolInputs["list_api_keys"],
@@ -9157,7 +9414,7 @@ export interface ToolMethods {
    *
    * Recent tool calls made with the agency's keys — which key, which tool, which client, how it ended and how long it took — newest first. Lists who did what through the API and MCP. Inputs are never recorded.
    *
-   * Requires `api:manage`. Agency-wide, changes state; not retried on 5xx.
+   * Requires `api:manage`. Agency-wide, read-only.
    */
   list_api_activity<T = unknown>(
     input?: ToolInputs["list_api_activity"],
@@ -9169,7 +9426,7 @@ export interface ToolMethods {
    *
    * Everyone with access to the agency: email, name, role, and the clients each is limited to (empty means agency-wide). Also lists the clients a new member could be limited to. Answers 'who can see this account'.
    *
-   * Requires `member:manage`. Agency-wide, changes state; not retried on 5xx.
+   * Requires `member:manage`. Agency-wide, read-only.
    */
   list_team_members<T = unknown>(
     input?: ToolInputs["list_team_members"],
@@ -9253,7 +9510,7 @@ export interface ToolMethods {
    *
    * Assistants and agent apps connected to the agency by signing in (MCP OAuth) rather than with an API key: which app, the role and client it was given, who approved it, and when it was last used. Answers 'what has access to our account'.
    *
-   * Requires `api:manage`. Agency-wide, changes state; not retried on 5xx.
+   * Requires `api:manage`. Agency-wide, read-only.
    */
   list_connected_apps<T = unknown>(
     input?: ToolInputs["list_connected_apps"],
@@ -9385,7 +9642,7 @@ export interface ToolMethods {
    *
    * Scores the client's link profile 0–100 (a heuristic, said so) from seven factors, each good, warn or critical with its figures and the source they came from (the vendor's synced index, our own link index, the domain graph): referring domains (20: over 100 good, under 20 critical), quality distribution (20: the linking sites' authority, and domain diversity — one site over 10% of the links warns, over 25% is critical), anchor naturalness (15: the anchor bands of get_anchor_distribution), toxic ratio (20: the share of linking sites get_toxic_link_risk calls toxic), velocity (10: a fall in referring domains of over 20% a quarter is critical), follow ratio (5: over 60% followed good, under 40% critical) and geographic relevance (10: the linking sites' TLD and country mix against the client's market; 80% or more from other countries flags a private network). Each factor carries its source's confidence (DataForSEO 1.0, our link index 0.7, Common Crawl 0.5), which scales its weight; a number only when at least four factors have data, and never from presence-only sources alone (NOT ASSESSED); otherwise INSUFFICIENT DATA (X/7). industry (saas, ecommerce, local, publisher, agency) judges the anchors against that industry's natural ranges. Also the profile's toxic signals: 50+ directory links, linking pages with 10,000+ outbound links, more than 50 links from one site, linking pages under 100 words, reciprocal links. Pass moneyTerms to tell exact and partial-match anchors apart. Spam scores sharpen the toxic ratio: fetchSpamScores: true buys them inside this call (one paid DataForSEO request of up to 1,000 linking sites, the price of get_backlink_spam_scores; sites scored in the last 30 days are reused free; quote it with estimate_cost or dryRun first), or pass spamScores you already have. Answers 'how healthy are our backlinks' and 'is our link profile at risk'. Free without fetchSpamScores.
    *
-   * Requires `data:read`. Client-scoped, read-only.
+   * Requires `data:read`. Client-scoped, changes state; not retried on 5xx.
    */
   get_backlink_health<T = unknown>(
     input: ToolInputs["get_backlink_health"],
@@ -9625,7 +9882,7 @@ export interface ToolMethods {
    *
    * The live white-label portal links for a client: label, when each was made, and when it was last opened. Lists who can currently see the client's results without an account. The addresses themselves are not shown — they exist only at the moment a link is made.
    *
-   * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
+   * Requires `client:manage`. Client-scoped, read-only.
    */
   list_portal_links<T = unknown>(
     input: ToolInputs["list_portal_links"],
@@ -9659,12 +9916,36 @@ export interface ToolMethods {
   /**
    * Onboard a site in one call.
    *
-   * Answers 'set this site up'. Makes the client, project, site and rank tracker — or finds the client already here for this domain, so calling it twice is safe — issues the IndexNow key and a Google site verification for the agency's own Google account, sets up cookieless analytics, and returns one deploy manifest: files to serve at exact paths, tags for the <head>, the analytics snippet placed for the framework given, and CSP entries. Deploy all of it, then call verify_site. No Google sign-in or Search Console settings are needed at any point. Free.
+   * Answers 'set this site up'. Makes the client, project, site and rank tracker — or finds the client already here for this domain, so calling it twice is safe — issues the IndexNow key and a Google site verification for the agency's own Google account, sets up cookieless analytics, and returns one deploy manifest: files to serve at exact paths, tags for the <head>, the analytics snippet placed for the framework given, and CSP entries, plus scheduledPaidWork: anything paid it leaves running on a schedule (nothing, for a new client: its tracker runs only once it has keywords, weekly unless trackerFrequency says otherwise, and the weekly domain sweep stays off until set_domain_sweep). Deploy all of it, then call verify_site. No Google sign-in or Search Console settings are needed at any point. Free.
    *
    * Requires `client:manage`. Agency-wide, changes state; not retried on 5xx.
    */
   onboard_site<T = unknown>(
     input: ToolInputs["onboard_site"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Bring a client to what its repo declares.
+   *
+   * Answers 'provision our product from its manifest' in one call that is safe to run on every deploy. Takes what a repository declares about its site (domain, framework, verification, tracker cadence, budget and its alert share, domain sweep, deploy hook, analytics paths and partners, crawl settings, default alerts and where they go, brief and brand terms, facts, goals, funnels) and brings the client to it through the existing tools, each with its own permission and checks. Each part is compared with what is there first: a step is kept when it would write nothing, ran when it changed something, would_run on a dry run. Fields the manifest leaves out are left as they are. files (the IndexNow key and Google verification file, which are public) come back on every real run. A new deploy hook's URL is in its step's result only, once. Free.
+   *
+   * Requires `client:manage`. Agency-wide, changes state; not retried on 5xx.
+   */
+  apply_manifest<T = unknown>(
+    input: ToolInputs["apply_manifest"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Move a client to a new domain.
+   *
+   * Answers 'the site moved to a new domain'. Keeps the client, its history and its analytics site key, and moves everything that follows the domain: the site and its rank trackers, the analytics hostnames (the old ones are still accepted for overlapDays, then refused), and the deploy hook (same URL; its next call records a fresh baseline). Issues a Google verification for the new domain and returns the deploy manifest to put on it (IndexNow key file, verification file, tag or TXT record), and adds a 'Domain moved' note to the timeline. Then deploy the manifest on the new domain and call verify_site, which verifies it and adds the new Search Console property. Free.
+   *
+   * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
+   */
+  move_site<T = unknown>(
+    input: ToolInputs["move_site"],
     options?: CallOptions,
   ): Promise<T>;
 
@@ -9683,12 +9964,24 @@ export interface ToolMethods {
   /**
    * What to do next for a site.
    *
-   * Answers 'what is left to do for this site, and what call does it'. The onboarding checklist with live status — done, todo, in progress, failed or blocked and why — each with the exact tool and arguments to call next; then the optional connections that unlock more tools (Bing Webmaster key, PageSpeed / Chrome UX Report key, alert delivery, rank tracker keywords, AI visibility schedule, analytics goals, crawl schedule), each with its status and call; then, once the site is set up, the weekly loop's calls with their arguments. Reads only; changes nothing. Free.
+   * The doctor call. Answers 'what is left to do for this site, and what call does it' and 'what is not connected for this client, and what does each missing piece block'. missing lists the ids of every item not done. The onboarding checklist with live status — done, todo, in progress, failed or blocked and why — each with the exact tool and arguments to call next; then the optional connections that unlock more tools (Bing Webmaster key, PageSpeed / Chrome UX Report key, alert delivery, rank tracker keywords, AI visibility schedule, analytics goals, crawl schedule), each with its status and call; then, once the site is set up, the weekly loop's calls with their arguments. Reads only; changes nothing. Free.
    *
    * Requires `data:read`. Client-scoped, read-only.
    */
   get_next_steps<T = unknown>(
     input: ToolInputs["get_next_steps"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Free keyword ideas for a new site.
+   *
+   * Keyword ideas that cost nothing, for a site too new for Search Console rows and an agency with no vendor credit: Google autocomplete suggestions and questions around each seed (default: the site's name), and the page names in competitors' sitemaps (competitorDomains). Each idea has its source and what it came from; there are no volumes, because none of these sources publishes one — add the best to a rank tracker, or price them later with get_keyword_metrics. Answers 'what should a brand-new site target'. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  bootstrap_keywords<T = unknown>(
+    input: ToolInputs["bootstrap_keywords"],
     options?: CallOptions,
   ): Promise<T>;
 
@@ -9733,7 +10026,7 @@ export interface ToolMethods {
    *
    * Lists the agency's invite codes — label, uses left, expiry, whether revoked — never the codes themselves. Answers 'which invite codes are out there'. Free.
    *
-   * Requires `api:manage`. Agency-wide, changes state; not retried on 5xx.
+   * Requires `api:manage`. Agency-wide, read-only.
    */
   list_invite_codes<T = unknown>(
     input?: ToolInputs["list_invite_codes"],
@@ -9755,7 +10048,7 @@ export interface ToolMethods {
   /**
    * Create a deploy hook.
    *
-   * Answers 'tell search engines whenever we deploy'. Makes the client's deploy hook: a secret URL the site's pipeline calls after every deploy (one curl, or a Netlify/Vercel/Cloudflare Pages/Coolify notification). Each call reads the sitemap, compares it with the last one, and submits the new and changed pages to IndexNow; the first call records the baseline only. Returns the URL once, with how to call it from each platform. Making it again replaces the URL. Free.
+   * Answers 'tell search engines whenever we deploy'. Makes the client's deploy hook: a secret URL the site's pipeline calls after every deploy (one curl, or a Netlify/Vercel/Cloudflare Pages/Coolify notification). Each call reads the sitemap, compares it with the last one, and submits the new and changed pages to IndexNow; the first call records the baseline only. A Forumulate webhook subscribed to page.live can point at it too: each published page is submitted when it goes live and noted on the timeline as a publish. Returns the URL once, with how to call it from each platform. Making it again rotates it: a new URL, and the old one stops working. With ifMissing: true an existing hook is left alone and returned as {created: false} without a URL, so a provisioning script can run it on every deploy safely. Free.
    *
    * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -9767,7 +10060,7 @@ export interface ToolMethods {
   /**
    * Get the deploy hook's status.
    *
-   * Answers 'did the last deploy notify search engines'. Whether the client has a deploy hook, how many sitemap pages it knows, and what its last call did. Never the URL itself. Free.
+   * Answers 'did the last deploy notify search engines' and 'does this client have a deploy hook'. exists, then (when it does) the hook's createdAt, lastCalledAt (the last call, whatever came of it), lastRunAt (the last run that read a sitemap), lastResult, how many sitemap pages it knows, and howToCall.coolify: the post-deploy command, which reads the URL from SEOLYTICIZE_DEPLOY_HOOK_URL. Never the URL itself: a lost URL is replaced with create_deploy_hook, which rotates it. Free.
    *
    * Requires `data:read`. Client-scoped, read-only.
    */
@@ -9791,7 +10084,7 @@ export interface ToolMethods {
   /**
    * Capture rankings now.
    *
-   * Captures the client's rank tracker now instead of at its next scheduled run: every tracked keyword on every device the tracker reads, each a paid lookup. Answers 'get me today's positions'. Quote it with estimate_cost first; with maxCostMicros the run is refused before it starts when its estimate is over the limit. Runs in the background: poll get_run_status with job 'rank', then read get_rank_history or get_rank_summary. A second request within the same minute lands on the run already going rather than paying twice.
+   * Captures the client's rank tracker now instead of at its next scheduled run: every tracked keyword on every device the tracker reads, each a paid lookup. Answers 'get me today's positions'. Quote it with estimate_cost first; with maxCostMicros the run is refused before it starts when its estimate is over the limit. Runs in the background: poll get_run_status with job 'rank' (or pass the jobId it returns to wait_for_job), then read get_rank_history or get_rank_summary. A second request within the same minute lands on the run already going rather than paying twice.
    *
    * Requires `spend:incur`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -9803,7 +10096,7 @@ export interface ToolMethods {
   /**
    * Refresh domain and backlink data now.
    *
-   * Refreshes everything bought about the client's domain — overview, ranked keywords, competitors, top pages and the backlink profile — plus what up to five tracked competitors rank for and who links to them. Answers 'update the backlinks and keyword data'. The dearest thing the product does: quote it with estimate_cost first; with maxCostMicros the refresh is refused before it starts when its estimate is over the limit. Runs in the background for a few minutes: poll get_run_status with job 'domain'. A second request within the hour lands on the refresh already going.
+   * Refreshes everything bought about the client's domain — overview, ranked keywords, competitors, top pages and the backlink profile — plus what up to five tracked competitors rank for and who links to them. Answers 'update the backlinks and keyword data'. The dearest thing the product does: quote it with estimate_cost first; with maxCostMicros the refresh is refused before it starts when its estimate is over the limit. Runs in the background for a few minutes: poll get_run_status with job 'domain' (or pass the jobId it returns to wait_for_job). A second request within the hour lands on the refresh already going.
    *
    * Requires `spend:incur`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -10175,7 +10468,7 @@ export interface ToolMethods {
   /**
    * Change how the site is crawled.
    *
-   * Changes the client's crawl settings for the next crawl; fields left out are kept. mode: spider (follow links from the home page and sitemap), list (crawl only listUrls, up to 5,000 addresses on the client's domain) or sitemap (crawl only the sitemap's URLs). includePatterns / excludePatterns: wildcards on the path and query ('/blog/*', '*?sort=*', '/*.pdf') or full addresses — with includes set, only matching URLs are crawled (the home page is still read to find them). maxPages (up to 20,000) and maxDepth (clicks from the start, up to 50). userAgent: preset seolyticize (default), googlebot-smartphone, googlebot-desktop, bingbot, chrome, or custom with your own string; robots.txt is obeyed as that crawler. requestsPerSecond (0.2–10, default 4) and concurrency (1–5); the crawler still backs off on 429s, 5xx and Retry-After. For staging sites' passwords, headers and cookies use set_crawl_auth. stripParams removes query parameters from every discovered URL (names, or prefixes like utm_*), so sorted and filtered copies of a page are crawled once. extractions reads values off every page (up to 10): css (a selector, optionally an attribute), xpath (//div[@class='author'], //meta[@property='og:type']/@content, (//a)[1]/@href — child and descendant steps, attribute and text tests, positions), regex (first group), jsonld ('Article.datePublished') or meta (a name or property) — see get_extraction_results. render runs JavaScript: off, shells (pages that look unrendered) or all, capped at renderMaxPages. Answers 'crawl this site this way'. Free.
+   * Changes the client's crawl settings for the next crawl; fields left out are kept. mode: spider (follow links from the home page and sitemap), list (crawl only listUrls, up to 5,000 addresses on the client's domain) or sitemap (crawl only the sitemap's URLs). includePatterns / excludePatterns: wildcards on the path and query ('/blog/*', '*?sort=*', '/*.pdf') or full addresses — with includes set, only matching URLs are crawled (the home page is still read to find them). maxPages (up to 20,000) and maxDepth (clicks from the start, up to 50). userAgent: preset seolyticize (default), googlebot-smartphone, googlebot-desktop, bingbot, chrome, or custom with your own string; robots.txt is obeyed as that crawler. requestsPerSecond (0.2–10, default 4) and concurrency (1–5); the crawler still backs off on 429s, 5xx and Retry-After. For staging sites' passwords, headers and cookies use set_crawl_auth. stripParams removes query parameters from every discovered URL (names, or prefixes like utm_*), so sorted and filtered copies of a page are crawled once; names match whatever their case (returnTo strips ?returnTo= and ?returnto=), so they are saved lower-cased. extractions reads values off every page (up to 10): css (a selector, optionally an attribute), xpath (//div[@class='author'], //meta[@property='og:type']/@content, (//a)[1]/@href — child and descendant steps, attribute and text tests, positions), regex (first group), jsonld ('Article.datePublished') or meta (a name or property) — see get_extraction_results. render runs JavaScript: off, shells (pages that look unrendered) or all, capped at renderMaxPages. Answers 'crawl this site this way'. Free.
    *
    * Requires `project:manage`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -10199,7 +10492,7 @@ export interface ToolMethods {
   /**
    * Everything the crawl read on a page.
    *
-   * One crawled page in full: its H2/H3 outline, word count, published and modified dates, structured data as written, custom extraction values, the addresses that redirect to it, what JavaScript changed when it was rendered, and its place in the link graph (inlinks, outlinks, click depth, internal PageRank, anchors). Answers 'what does the crawler see on this page'. Use get_page_issues for its issues. Free.
+   * One crawled page in full: its H2/H3 outline, word count, published and modified dates, structured data as written, custom extraction values, the addresses that redirect to it, its canonical and whether it came from the HTML tag or the HTTP Link header, what JavaScript changed when it was rendered, and its place in the link graph (inlinks, outlinks, click depth, internal PageRank, anchors). Answers 'what does the crawler see on this page'. Use get_page_issues for its issues. Free.
    *
    * Requires `data:read`. Client-scoped, read-only.
    */
@@ -10871,12 +11164,24 @@ export interface ToolMethods {
   /**
    * Record the client's canonical facts.
    *
-   * Writes the client's facts — prices, plan limits, countries served, founding date, contact details — each with a key ("starter plan price"), its value ("$29/month"), a category and optionally the terms a sentence must contain to be about it; replaces a fact with the same key. dryRun: true saves nothing and lists wouldSet, each fact as it would be saved with the value it would replace. check_ai_brand_accuracy checks assistants against them first, and score_content and get_freshness_queue flag pages whose text contradicts one. Answers 'remember that our price is now $29'. Free.
+   * Writes the client's facts — prices, plan limits, countries served, founding date, contact details — each with a key ("starter plan price"), its value ("$29/month"), a category and optionally the terms a sentence must contain to be about it; replaces a fact with the same key. Keys are case-insensitive and stored folded (lowercase, single spaces): "Free plan limits" is saved and listed as "free plan limits", and the answer gives each key as stored, so compare keys folded. dryRun: true saves nothing and lists wouldSet, each fact as it would be saved with the value it would replace. check_ai_brand_accuracy checks assistants against them first, and score_content and get_freshness_queue flag pages whose text contradicts one. Answers 'remember that our price is now $29'. Free.
    *
    * Requires `data:write`. Client-scoped, changes state; not retried on 5xx.
    */
   set_client_facts<T = unknown>(
     input: ToolInputs["set_client_facts"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Import the client's facts from a manifest.
+   *
+   * Reads a facts manifest the site's repository owns — JSON {"facts": [{key, value, category?, terms?, sourceUrl?}]}, the same fields as set_client_facts — and writes it with set_client_facts, so the facts live next to the code they describe. From content given, from url, or by default from https://<client domain>/.well-known/seolyticize.json. dryRun: true shows what would change (wouldSet, each with what it replaces) and writes nothing. Each deploy hook call compares the published manifest with the registered facts and lists differences as factsDrift. Answers 'keep our facts in sync with the repo'. Free.
+   *
+   * Requires `data:write`. Client-scoped, changes state; not retried on 5xx.
+   */
+  import_client_facts<T = unknown>(
+    input: ToolInputs["import_client_facts"],
     options?: CallOptions,
   ): Promise<T>;
 
@@ -11125,7 +11430,7 @@ export interface ToolMethods {
    *
    * Invites not yet accepted or withdrawn, newest first, with role, client scope, when each expires and how often it was sent. Expired ones are listed so they can be resent. Answers 'who have we invited who has not joined'.
    *
-   * Requires `member:manage`. Agency-wide, changes state; not retried on 5xx.
+   * Requires `member:manage`. Agency-wide, read-only.
    */
   list_team_invites<T = unknown>(
     input?: ToolInputs["list_team_invites"],
@@ -11461,7 +11766,7 @@ export interface ToolMethods {
    *
    * A 0–100 generative-engine readiness score per page, for the pages given or the top pages by Search Console clicks (up to 20): citability 25 (an answer in the first 40–60 words of each H2 section, self-contained 130–170-word passages, 'X is…' definitions, figures with a cited source, the most citable block in the first 30% of the page), structure 20 (heading hierarchy, question headings, 2–4-sentence paragraphs, tables and lists), multimodal 15 (images, video, VideoObject markup, infographics and charts, calculators and other interactive elements), authority 20 (author, dates, recency — under 3 months best, over 6 stale — links to primary sources, and the brand on Wikipedia, Wikidata, Reddit, YouTube and LinkedIn from the site's sameAs and Wikidata, expert quotes with attribution), technical 20 (server-side rendering from the crawl, OAI-SearchBot, Claude-SearchBot and PerplexityBot allowed, an RSL licence, snippets allowed — nosnippet or max-snippet:0 keeps a page out of AI Overviews and AI Mode, data-nosnippet reported; llms.txt reported at weight 0). Training, search and user crawlers are reported apart, Bytespider, cohere-ai, Google-CloudVertexBot and Google-Agent (which ignores robots.txt) among them. Also a readiness score per answer engine (Google AI Overviews, AI Mode, ChatGPT, Perplexity, Claude, Bing Copilot) from the parts each leans on, 0 where its crawler is blocked: readiness, not measured citations. brandMentions: true adds how often Google finds the brand named on the web, Reddit, YouTube, LinkedIn and Wikipedia (five paid results pages; quote with estimate_cost). Unmeasured parts are null and the rest rescaled; a heuristic, and said so. Answers 'are our pages written to be cited by ChatGPT and Perplexity' and 'what is our GEO score'. Free without brandMentions.
    *
-   * Requires `data:read`. Client-scoped, read-only.
+   * Requires `data:read`. Client-scoped, changes state; not retried on 5xx.
    */
   get_geo_readiness<T = unknown>(
     input: ToolInputs["get_geo_readiness"],
@@ -11797,7 +12102,7 @@ export interface ToolMethods {
    *
    * The share links made with create_report_link that still open, newest first, for one client or (without clientId) every client the caller can see: each with linkId, the report, its period, when it was made and by whom, when it expires, and when it was last opened (lastViewedAt, null if never) with a view count. Answers 'which report links are out there' and 'has the client opened the report'. The address itself is not returned: it is a secret shown once and never stored, so make a new link to send it again. Free.
    *
-   * Requires `report:send`. Agency-wide, changes state; not retried on 5xx.
+   * Requires `report:send`. Agency-wide, read-only.
    */
   list_report_links<T = unknown>(
     input?: ToolInputs["list_report_links"],
@@ -11841,6 +12146,18 @@ export interface ToolMethods {
   ): Promise<T>;
 
   /**
+   * Every scheduled paid job, with how to pause it.
+   *
+   * Lists each piece of paid work that runs on a schedule for a client — the weekly domain sweep, rank trackers, AI visibility checks, alert rules with a paid source — with what a month of it costs, who turned it on where that is recorded, and the exact call that pauses it and the one that resumes it. The same items as get_budget_status.projection, plus any that could not be priced. Answers 'what is this client paying for on a schedule, and how do I stop it'. Free.
+   *
+   * Requires `cost:view`. Client-scoped, read-only.
+   */
+  get_scheduled_work<T = unknown>(
+    input: ToolInputs["get_scheduled_work"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
    * Create a lead-gen audit widget.
    *
    * Makes an audit form for the agency's own website: a visitor enters their URL and email, sees a short audit of the page on the spot, and lands in list_leads. Returns embedCode to paste into the site and frameUrl for the form alone. Answers 'put a free audit form on our site'. Limited per visitor and guarded against internal addresses. Free.
@@ -11857,7 +12174,7 @@ export interface ToolMethods {
    *
    * The agency's audit forms, each with its embed code, allowed sites, who is notified and whether it is switched on. Answers 'which audit forms do we have on our sites'. Free.
    *
-   * Requires `agency:settings`. Agency-wide, changes state; not retried on 5xx.
+   * Requires `agency:settings`. Agency-wide, read-only.
    */
   list_lead_widgets<T = unknown>(
     input?: ToolInputs["list_lead_widgets"],
@@ -11881,7 +12198,7 @@ export interface ToolMethods {
    *
    * People who asked for an audit through the agency's widgets, newest first: email, the page they checked, where the form was, the audit they were shown (counts, page title and findings), and whether the agency was emailed (notifyError says why not). Answers 'who filled in our audit form'. Free.
    *
-   * Requires `agency:settings`. Agency-wide, changes state; not retried on 5xx.
+   * Requires `agency:settings`. Agency-wide, read-only.
    */
   list_leads<T = unknown>(
     input?: ToolInputs["list_leads"],
@@ -11937,6 +12254,30 @@ export interface ToolMethods {
   ): Promise<T>;
 
   /**
+   * Add the site to Bing Webmaster Tools.
+   *
+   * Adds the client's site to the agency's Bing Webmaster Tools account (the one the saved key belongs to), if it is not there yet, and returns Bing's three proofs: file (/BingSiteAuth.xml, served exactly as given), meta (the msvalidate.01 tag) and dns (a CNAME to verify.bing.com). Answers 'add this site to Bing' and 'how do we verify the site in Bing'. Deploy one proof, then call verify_bing_site. Safe to repeat: an added site is returned as it is. Free.
+   *
+   * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
+   */
+  add_bing_site<T = unknown>(
+    input: ToolInputs["add_bing_site"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Verify the site in Bing Webmaster Tools.
+   *
+   * Asks Bing to check the proof add_bing_site gave (the BingSiteAuth.xml file, the msvalidate.01 meta tag or the CNAME), and answers verified. Once it is, get_bing_search_stats, get_bing_crawl_health and the other Bing tools read the site. Answers 'is the site verified in Bing'. A site already verified is answered at once. Free.
+   *
+   * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
+   */
+  verify_bing_site<T = unknown>(
+    input: ToolInputs["verify_bing_site"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
    * Submit pages to Bing.
    *
    * Submits addresses on the client's site to Bing through Webmaster Tools' URL submission (SubmitUrlBatch), after reading the site's daily quota: addresses beyond what is left today are returned as not sent rather than refused by Bing one by one. Answers 'get Bing to index these pages now'. Only addresses on the client's own site are sent. submit_indexnow reaches Bing too, without the quota, once the client's IndexNow key is published. dryRun: true reads the quota but sends nothing, returning wouldSubmit, refused, and the quote.
@@ -11969,6 +12310,18 @@ export interface ToolMethods {
    */
   submit_bing_sitemap<T = unknown>(
     input: ToolInputs["submit_bing_sitemap"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Add and verify the site in Yandex Webmaster.
+   *
+   * Adds the client's site to the connected Yandex Webmaster account if it is not there, asks Yandex to check the chosen proof (method file: /yandex_<code>.html; meta: the yandex-verification tag; dns: a TXT record), and once verified points the connection at it so get_yandex_performance, get_yandex_indexing and the other Yandex tools read the site. Answers 'add this site to Yandex' and 'is the site verified in Yandex'. Returns the proof to deploy while unverified; Yandex checks in the background, so call again after IN_PROGRESS. Needs a Yandex token with webmaster:verify as well as webmaster:hostinfo. Free.
+   *
+   * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
+   */
+  verify_yandex_host<T = unknown>(
+    input: ToolInputs["verify_yandex_host"],
     options?: CallOptions,
   ): Promise<T>;
 
@@ -12241,7 +12594,7 @@ export interface ToolMethods {
    *
    * Judges each site linking to the client from the evidence a person can check: the vendor's spam score (fetchSpamScores: true buys it for every linking site inside this call — one paid DataForSEO request of up to 1,000 sites, the price of get_backlink_spam_scores, with sites scored in the last 30 days reused free; or pass spamScores you already have), sitewide links (the link on most of the pages we hold of the site: a footer or blogroll), link-seller neighbourhoods (a site linking out to hundreds of domains from few pages), commercial exact-match anchors (pass moneyTerms; brand terms are excluded), the vendor links' own authority and outbound signals, and claude-seo's thirty toxic patterns where the data allows (a page with 10,000+ or 50+ outbound links, a domain registered under 30 days ago with 100+ outbound links or re-registered after it lapsed — from RDAP for the sites linking out most — pharma or casino injections, sitewide links and exact-match anchors from unrelated sites, foreign-language and parked sites, article directories, forum profiles, press release wires, coupon sites, comment links, unrelated niches when moneyTerms say what the client does), each pattern reported flagged, clear or unmeasured with why. disavow says whether a file is worth making (toxic over 10% of the sites: yes; under 2%: no). A verdict (healthy, review, toxic) and every reason with its detail; whether the last saved disavow file already names the site, and the toxic sites that appeared since it. Answers 'which of our links are toxic and why' and 'what should go in the disavow file now'. 'review' means look, not disavow. Free without fetchSpamScores; with it, quote it with estimate_cost or dryRun first.
    *
-   * Requires `data:read`. Client-scoped, read-only.
+   * Requires `data:read`. Client-scoped, changes state; not retried on 5xx.
    */
   get_toxic_link_risk<T = unknown>(
     input: ToolInputs["get_toxic_link_risk"],
@@ -12839,7 +13192,7 @@ export interface ToolMethods {
   /**
    * Define a funnel.
    *
-   * Defines a funnel: 2 to 8 steps (a page reached or an event sent) a visit should pass through in order — landing page, product, cart, thank-you. Measured within one visit, because the cookieless visitor id resets daily. Answers 'how many who see pricing go on to sign up'. Free.
+   * Defines a funnel: 2 to 8 steps (a page reached or an event sent) a visit should pass through in order — landing page, product, cart, thank-you. Measured within one visit, because the cookieless visitor id resets daily. Pageview and event steps mix in any order; each step must happen after the one before it in the visit. Labels are optional and need not be unique (the report names a step by its label, else its match). Answers 'how many who see pricing go on to sign up'. Free.
    *
    * Requires `data:write`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -13201,7 +13554,7 @@ export interface ToolMethods {
    *
    * Scores pages of the client's site (urls, up to 20, or the topPages by Search Console clicks) for Experience (20), Expertise (25), Authoritativeness (25) and Trust (30), each from sub-criteria graded Strong, Moderate, Weak or None with the evidence and the fix: first-hand method and results, figures, original images, a byline and author page, Person markup with jobTitle and sameAs, credentials, citations to outside and primary sources and the share of uncited claims, visible dates, about, contact, privacy and terms pages, HTTPS, reviews, a returns policy on shops, specialised vocabulary, awards and accreditations, 'featured in' media coverage, professional affiliations, a history of publishing on the topic (other crawled pages on it), visible corrections and update history, no deceptive practices (undisclosed affiliate links, clickbait headlines, false urgency), secure payments on shops, and for the site referring domains and brand mentions from our index and a Wikidata entity. Flags pages weak on who, how and why (atRisk), YMYL pages (health, finance, legal, news, civic, groups) with no credentials (Expertise capped at Weak), generic AI-style pages (one heading template, no author, stock phrasing), stale pages on fast-moving topics, and reading ease outside 60–70 (information only). Bands at 90/70/50/30, each page and the sample with the next steps for its band. A heuristic. judge: true regrades Experience with one metered Claude call (quote it with estimate_cost). Answers 'does our content show E-E-A-T' and 'which pages look untrustworthy'. Free without judge.
    *
-   * Requires `data:read`. Client-scoped, read-only.
+   * Requires `data:read`. Client-scoped, changes state; not retried on 5xx.
    */
   score_eeat<T = unknown>(
     input: ToolInputs["score_eeat"],
@@ -13235,7 +13588,7 @@ export interface ToolMethods {
   /**
    * Add the default alerts.
    *
-   * Gives a client the four alerts every new client now starts with: the site goes down (site-unreachable), non-branded Search Console clicks fall 30% or more week on week (traffic-drop 30), a crawl finds critical issues (new-critical-issues 1), and a tracked keyword drops 5 or more places (rank-drop 5). Each goes to the agency owner's email until changed with update_alert_rule. A kind the client already has a rule for is kept as it is, so it is safe to repeat. Pass clientId for one client, or allClients: true for every live client the key may manage. Answers 'set up the usual alerts'. Free.
+   * Gives a client the four alerts every new client now starts with: the site goes down (site-unreachable), non-branded Search Console clicks fall 30% or more week on week (traffic-drop 30), a crawl finds critical issues (new-critical-issues 1), and a tracked keyword drops 5 or more places (rank-drop 5). Each goes to the agency owner's email until changed with update_alert_rule. A kind the client already has a rule for is kept as it is, so it is safe to repeat. channel with webhookUrl (slack, webhook, discord), emailRecipients (email) or telegramChatId (telegram) sends them there instead, and moves default rules still going only to the owner's email (moved). include: ["page-changes"] adds a fifth: own pages whose title, meta description, H1 or canonical changed, went noindex or 404. Pass clientId for one client, or allClients: true for every live client the key may manage. Answers 'set up the usual alerts'. Free.
    *
    * Requires `client:manage`. Agency-wide, changes state; not retried on 5xx.
    */
@@ -13331,7 +13684,7 @@ export interface ToolMethods {
   /**
    * Estimate what a call will cost.
    *
-   * Quotes the most a tool call can cost before it is made, without buying anything. Answers 'how much will this cost'. Pass the tool's name and the exact arguments you would call it with; the result lists each purchase the call can make with its ceiling, plus monthlyMicros for scheduled work. Show the estimate to the user before a paid call, then pass estimatedMaxMicros as that call's maxCostMicros so it cannot spend more. Cached data costs nothing, so real charges are often lower. Also quotes "rank_tracker": a rank tracker's captures (arguments: clientId, trackerId) — per run and per month. Free.
+   * Quotes the most a tool call can cost before it is made, without buying anything. Answers 'how much will this cost'. Pass the tool's name and the exact arguments you would call it with; the result lists each purchase the call can make with its ceiling, plus monthlyMicros for scheduled work. Show the estimate to the user before a paid call, then pass estimatedMaxMicros as that call's maxCostMicros so it cannot spend more. Cached data costs nothing, so real charges are often lower. A paid quote also says vendorReady and vendorBalanceMicros: vendorReady false (with the code the call would fail with, such as vendor_balance_empty) means the purchase cannot be made right now. Also quotes "rank_tracker": a rank tracker's captures (arguments: clientId, trackerId) — per run and per month. Free.
    *
    * Requires `data:read`. Agency-wide, read-only.
    */
@@ -13389,6 +13742,18 @@ export interface ToolMethods {
   ): Promise<T>;
 
   /**
+   * Turn the weekly domain refresh on or off.
+   *
+   * Turns the Sunday 01:00 UTC domain sweep on or off for one client: the weekly paid refresh of its domain overview, ranked keywords, competitors, top pages and backlinks. It is off for new clients (onboarding schedules no paid work by itself) and on for clients made before 2026-11-02; get_budget_status shows what it costs a month and who turned it on (projection.items[].enabledBy). refresh_domain_data still runs it by hand. Answers 'stop the weekly backlink refresh'. Free.
+   *
+   * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
+   */
+  set_domain_sweep<T = unknown>(
+    input: ToolInputs["set_domain_sweep"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
    * How a slow job is going.
    *
    * One way to follow anything slow — a crawl, a rank or domain refresh, a performance run: its status (queued, running, done, failed), progress, an ETA where one can be told, and the tool that reads the finished result. jobId is kind:id — crawl:<crawlId> (from start_crawl), rank:<runId> (refresh_rankings), domain:<runId> (refresh_domain_data), performance:<runId>. An AI visibility check reports through get_ai_visibility_runs. Answers 'is my crawl done'. Free.
@@ -13426,7 +13791,7 @@ export interface ToolMethods {
    *
    * The agency's webhooks: URL, events, client, and whether one was switched off after failing for too long. Answers 'what webhooks do we have'. Free.
    *
-   * Requires `api:manage`. Agency-wide, changes state; not retried on 5xx.
+   * Requires `api:manage`. Agency-wide, read-only.
    */
   list_webhooks<T = unknown>(
     input?: ToolInputs["list_webhooks"],
@@ -13450,7 +13815,7 @@ export interface ToolMethods {
    *
    * A webhook's recent deliveries, newest first: event, status, attempts, the receiver's last HTTP status and error. Answers 'why isn't my webhook receiving anything'. Free.
    *
-   * Requires `api:manage`. Agency-wide, changes state; not retried on 5xx.
+   * Requires `api:manage`. Agency-wide, read-only.
    */
   list_webhook_deliveries<T = unknown>(
     input: ToolInputs["list_webhook_deliveries"],
