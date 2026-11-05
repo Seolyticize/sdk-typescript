@@ -2005,7 +2005,7 @@ export interface ToolInputs {
     domainSweep?: boolean;
     /** Defaults to false. */
     deployHook?: boolean;
-    /** Also make the read-only key for seolyticize doctor, as onboard_site does; shown once, and kept on later runs. */
+    /** Also make the read-only key for seolyticize doctor, as onboard_site does; shown once at the top of the answer as healthKey.key, and kept on later runs. */
     healthKey?: boolean;
     brief?: {
       overview?: string | null;
@@ -10602,7 +10602,7 @@ export interface ToolMethods {
   /**
    * Conversions by landing page and source.
    *
-   * Conversions (sign-ups, purchases, any goal) by the page a visit landed on, its source or its referrer, with visits, converting visits, conversion rate and value — and, by landing page, the Search Console queries that bring those visits. Answers 'which pages and queries actually make money' and 'what is organic search worth'. source web_analytics uses the cookieless analytics' custom events (goals: the event names; default every event; value from a 'value' property); ga4 uses GA4's key events on organic sessions. channel narrows to search engines or AI assistants. Free.
+   * Conversions (sign-ups, purchases, any goal) by the page a visit landed on, its source or its referrer, with visits, converting visits, conversion rate (of visits with a pageview, null when there are none) and value — and, by landing page, the Search Console queries that bring those visits. Answers 'which pages and queries actually make money' and 'what is organic search worth'. source web_analytics uses the cookieless analytics' custom events (goals: the event names; default the client's event goals, or every event when it has none, which a note says; value from a 'value' property); ga4 uses GA4's key events on organic sessions. channel narrows to search engines or AI assistants. Free.
    *
    * Requires `data:read`. Client-scoped, read-only.
    */
@@ -13815,7 +13815,7 @@ export interface ToolMethods {
   /**
    * Subscribe a URL to events.
    *
-   * Sends events to an https URL as they happen, signed: each POST carries Seolyticize-Signature: t=<unix>,v1=<hex HMAC-SHA256 of "<t>.<body>" with the secret>, plus Seolyticize-Event and Seolyticize-Delivery headers. Retried with backoff (1 min to a day) until a 2xx; replay_webhooks sends missed ones again. Events: crawl.completed, gsc.synced, rank.moved, backlink.new, backlink.lost, issue.new_critical, ai.citation.gained, ai.citation.lost, competitor.page.new, budget.threshold, alert.fired, vendor.balance_low, vendor.balance_empty. clientId limits it to one client; null is every client. The secret is in the response once. Answers 'tell my system when a crawl finishes'. Free.
+   * Sends events to an https URL as they happen, signed: each POST carries Seolyticize-Signature: t=<unix>,v1=<hex HMAC-SHA256 of "<t>.<body>" with the secret>, plus Seolyticize-Event and Seolyticize-Delivery headers. Retried with backoff (1 min to a day) until a 2xx; replay_webhooks sends missed ones again. Events: crawl.completed, gsc.synced, rank.moved, backlink.new, backlink.lost, issue.new_critical, ai.citation.gained, ai.citation.lost, competitor.page.new, budget.threshold, alert.fired, vendor.balance_low, vendor.balance_empty. vendor.balance_low and vendor.balance_empty fire at most once a week while the balance stays low, not once per crossing. clientId limits it to one client; null is every client. The secret is in the response once. Answers 'tell my system when a crawl finishes'. Free.
    *
    * Requires `api:manage`. Agency-wide, changes state; not retried on 5xx.
    */
