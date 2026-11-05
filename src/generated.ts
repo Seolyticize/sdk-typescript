@@ -2174,8 +2174,15 @@ export interface ToolInputs {
     clientId: string;
     /** Read this sitemap instead of robots.txt's Sitemap: line or /sitemap.xml. Constraints: max length 2048, format uri. */
     sitemapUrl?: string;
-    /** Make a hook only when the client has none; never rotate one. Defaults to false. */
+    /** Leave an existing hook alone instead of refusing with hook_exists. Defaults to false. */
     ifMissing?: boolean;
+  };
+  /** Input for rotate_deploy_hook: Rotate the deploy hook's secret. */
+  rotate_deploy_hook: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Read this sitemap from now on. Constraints: max length 2048, format uri. */
+    sitemapUrl?: string;
   };
   /** Input for get_deploy_hook: Get the deploy hook's status. */
   get_deploy_hook: {
@@ -6568,7 +6575,7 @@ export interface ToolInputs {
     clientId?: string | null;
     /** Constraints: max length 2000, format uri. */
     url: string;
-    /** Constraints: min items 1, max items 11. */
+    /** Constraints: min items 1, max items 13. */
     events: Array<
       | "crawl.completed"
       | "gsc.synced"
@@ -6581,6 +6588,8 @@ export interface ToolInputs {
       | "competitor.page.new"
       | "budget.threshold"
       | "alert.fired"
+      | "vendor.balance_low"
+      | "vendor.balance_empty"
     >;
   };
   /** Input for list_webhooks: List webhooks. */
@@ -7037,6 +7046,11 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
   list_invite_codes: { permission: "api:manage", clientScoped: false, readOnly: true },
   revoke_invite_code: { permission: "api:manage", clientScoped: false, readOnly: false },
   create_deploy_hook: {
+    permission: "client:manage",
+    clientScoped: true,
+    readOnly: false,
+  },
+  rotate_deploy_hook: {
     permission: "client:manage",
     clientScoped: true,
     readOnly: false,
@@ -8971,7 +8985,7 @@ export interface ToolMethods {
   /**
    * Who am I connected as.
    *
-   * Says who this connection is: the agency, whether it is an API key or a person, the role, every permission that role holds, and the clients it can reach. Answers 'what can this key do'. Call it first when unsure whether a task is allowed. Free.
+   * Says who this connection is: the agency, whether it is an API key or a person, the role, every permission that role holds, the clients it can reach, and vendorBalanceUsable (false when the agency's DataForSEO balance is empty and paid calls fail, null with no key of its own or when it cannot be read). Answers 'what can this key do'. Call it first when unsure whether a task is allowed. Free.
    *
    * Requires `data:read`. Agency-wide, read-only.
    */
@@ -9928,7 +9942,7 @@ export interface ToolMethods {
   /**
    * Bring a client to what its repo declares.
    *
-   * Answers 'provision our product from its manifest' in one call that is safe to run on every deploy. Takes what a repository declares about its site (domain, framework, verification, tracker cadence, budget and its alert share, domain sweep, deploy hook, analytics paths and partners, crawl settings, default alerts and where they go, brief and brand terms, facts, goals, funnels) and brings the client to it through the existing tools, each with its own permission and checks. Each part is compared with what is there first: a step is kept when it would write nothing, ran when it changed something, would_run on a dry run. Fields the manifest leaves out are left as they are. files (the IndexNow key and Google verification file, which are public) come back on every real run. A new deploy hook's URL is in its step's result only, once. Free.
+   * Answers 'provision our product from its manifest' in one call that is safe to run on every deploy. Takes what a repository declares about its site (domain, framework, verification, tracker cadence, budget and its alert share, domain sweep, deploy hook, analytics paths and partners, crawl settings, default alerts and where they go, brief and brand terms, facts, goals, funnels) and brings the client to it through the existing tools, each with its own permission and checks. Each part is compared with what is there first: a step is kept when it would write nothing, ran when it changed something, would_run on a dry run. Fields the manifest leaves out are left as they are. files (the IndexNow key and Google verification file, which are public) come back on every real run. env lists each environment variable to set: build (read at build time), runtime and secrets, with public ids as values and secrets only as a placeholder naming the tool that issues them. A new deploy hook's secret is in its step's result only, once. Free.
    *
    * Requires `client:manage`. Agency-wide, changes state; not retried on 5xx.
    */
@@ -10048,7 +10062,7 @@ export interface ToolMethods {
   /**
    * Create a deploy hook.
    *
-   * Answers 'tell search engines whenever we deploy'. Makes the client's deploy hook: a secret URL the site's pipeline calls after every deploy (one curl, or a Netlify/Vercel/Cloudflare Pages/Coolify notification). Each call reads the sitemap, compares it with the last one, and submits the new and changed pages to IndexNow; the first call records the baseline only. A Forumulate webhook subscribed to page.live can point at it too: each published page is submitted when it goes live and noted on the timeline as a publish. Returns the URL once, with how to call it from each platform. Making it again rotates it: a new URL, and the old one stops working. With ifMissing: true an existing hook is left alone and returned as {created: false} without a URL, so a provisioning script can run it on every deploy safely. Free.
+   * Answers 'tell search engines whenever we deploy'. Makes the client's deploy hook, which the site's pipeline calls after every deploy. Each call reads the sitemap, compares it with the last one, and submits the new and changed pages to IndexNow; the first call records the baseline only. A Forumulate webhook subscribed to page.live can point at it too: each published page is submitted when it goes live and noted on the timeline as a publish. Returns hookId and url (neither is secret), secret (sent as Authorization: Bearer; shown only here), webhookUrl (the secret in the path, only for senders that cannot set a header, such as Netlify, Vercel, Cloudflare Pages and Forumulate; treat that whole URL as a secret) and howToCall for each platform. A client that already has a hook is refused with hook_exists and nothing changes; rotate_deploy_hook replaces the secret. With ifMissing: true an existing hook is left alone and returned as {created: false} without a secret, so a provisioning script can run it on every deploy safely. Free.
    *
    * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -10058,9 +10072,21 @@ export interface ToolMethods {
   ): Promise<T>;
 
   /**
+   * Rotate the deploy hook's secret.
+   *
+   * Answers 'that deploy hook secret leaked, replace it' and 'point the hook at another sitemap'. Replaces the secret: the old secret and the old webhookUrl stop working at once, while hookId, url and the sitemap baseline stay. Returns the new secret and webhookUrl once, with howToCall. Pass sitemapUrl to change the sitemap read; without it the current one is kept. Free.
+   *
+   * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
+   */
+  rotate_deploy_hook<T = unknown>(
+    input: ToolInputs["rotate_deploy_hook"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
    * Get the deploy hook's status.
    *
-   * Answers 'did the last deploy notify search engines' and 'does this client have a deploy hook'. exists, then (when it does) the hook's createdAt, lastCalledAt (the last call, whatever came of it), lastRunAt (the last run that read a sitemap), lastResult (led by the call's source and ref in brackets when it sent them), how many sitemap pages it knows, and howToCall.coolify: the post-deploy command, which reads the URL from SEOLYTICIZE_DEPLOY_HOOK_URL. Never the URL itself: a lost URL is replaced with create_deploy_hook, which rotates it. Free.
+   * Answers 'did the last deploy notify search engines' and 'does this client have a deploy hook'. exists, then (when it does) the hook's createdAt, lastCalledAt (the last call, whatever came of it), lastRunAt (the last run that read a sitemap), lastResult (led by the call's source and ref in brackets when it sent them), how many sitemap pages it knows, and howToCall.coolify: the post-deploy command, which reads the URL and secret from SEOLYTICIZE_DEPLOY_HOOK_URL and SEOLYTICIZE_DEPLOY_HOOK_SECRET. hookId is not secret. Never the secret itself: a lost one is replaced with rotate_deploy_hook. Free.
    *
    * Requires `data:read`. Client-scoped, read-only.
    */
@@ -10072,7 +10098,7 @@ export interface ToolMethods {
   /**
    * Revoke the deploy hook.
    *
-   * Answers 'that deploy hook URL leaked'. Stops the client's deploy hook URL working at once. Free.
+   * Answers 'stop this deploy hook'. Deletes the client's deploy hook, so its URL and secret stop working at once. To replace a leaked secret and keep the hook, use rotate_deploy_hook. Free.
    *
    * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -13777,7 +13803,7 @@ export interface ToolMethods {
   /**
    * Subscribe a URL to events.
    *
-   * Sends events to an https URL as they happen, signed: each POST carries Seolyticize-Signature: t=<unix>,v1=<hex HMAC-SHA256 of "<t>.<body>" with the secret>, plus Seolyticize-Event and Seolyticize-Delivery headers. Retried with backoff (1 min to a day) until a 2xx; replay_webhooks sends missed ones again. Events: crawl.completed, gsc.synced, rank.moved, backlink.new, backlink.lost, issue.new_critical, ai.citation.gained, ai.citation.lost, competitor.page.new, budget.threshold, alert.fired. clientId limits it to one client; null is every client. The secret is in the response once. Answers 'tell my system when a crawl finishes'. Free.
+   * Sends events to an https URL as they happen, signed: each POST carries Seolyticize-Signature: t=<unix>,v1=<hex HMAC-SHA256 of "<t>.<body>" with the secret>, plus Seolyticize-Event and Seolyticize-Delivery headers. Retried with backoff (1 min to a day) until a 2xx; replay_webhooks sends missed ones again. Events: crawl.completed, gsc.synced, rank.moved, backlink.new, backlink.lost, issue.new_critical, ai.citation.gained, ai.citation.lost, competitor.page.new, budget.threshold, alert.fired, vendor.balance_low, vendor.balance_empty. clientId limits it to one client; null is every client. The secret is in the response once. Answers 'tell my system when a crawl finishes'. Free.
    *
    * Requires `api:manage`. Agency-wide, changes state; not retried on 5xx.
    */
