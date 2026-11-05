@@ -1976,6 +1976,8 @@ export interface ToolInputs {
     keywords?: string[];
     /** file (a page at the site root, the default), meta (a tag in the <head>) or dns (a TXT record, which also covers every subdomain and protocol). Defaults to "file". */
     verification?: "file" | "meta" | "dns";
+    /** Also make a read-only key pinned to this client that can spend nothing, for seolyticize doctor. It is shown once in healthKey.key; a later call keeps it and returns its id alone. */
+    healthKey?: boolean;
     /** How often the client's rank tracker runs once it has keywords: weekly is the default for a new tracker. Applied to an existing client's trackers too. update_rank_tracker changes it later. */
     trackerFrequency?: "daily" | "weekly" | "monthly" | "manual";
   };
@@ -2003,6 +2005,8 @@ export interface ToolInputs {
     domainSweep?: boolean;
     /** Defaults to false. */
     deployHook?: boolean;
+    /** Also make the read-only key for seolyticize doctor, as onboard_site does; shown once, and kept on later runs. */
+    healthKey?: boolean;
     brief?: {
       overview?: string | null;
       goal?: string | null;
@@ -2174,6 +2178,10 @@ export interface ToolInputs {
     clientId: string;
     /** Read this sitemap instead of robots.txt's Sitemap: line or /sitemap.xml. Constraints: max length 2048, format uri. */
     sitemapUrl?: string;
+    /** Sitemaps to read as well as the site's own, on any host (a CMS elsewhere). Every call diffs each one and the reply gives bySitemap: its pages and how many changed. Constraints: max items 20. */
+    sitemaps?: string[];
+    /** false: leave webhookUrl, the secret in a path, out of the answer. */
+    pathUrl?: boolean;
     /** Leave an existing hook alone instead of refusing with hook_exists. Defaults to false. */
     ifMissing?: boolean;
   };
@@ -2183,6 +2191,10 @@ export interface ToolInputs {
     clientId: string;
     /** Read this sitemap from now on. Constraints: max length 2048, format uri. */
     sitemapUrl?: string;
+    /** Sitemaps to read as well as the site's own, on any host (a CMS elsewhere). Every call diffs each one and the reply gives bySitemap: its pages and how many changed. Constraints: max items 20. */
+    sitemaps?: string[];
+    /** false: leave webhookUrl, the secret in a path, out of the answer. */
+    pathUrl?: boolean;
   };
   /** Input for get_deploy_hook: Get the deploy hook's status. */
   get_deploy_hook: {
@@ -10062,7 +10074,7 @@ export interface ToolMethods {
   /**
    * Create a deploy hook.
    *
-   * Answers 'tell search engines whenever we deploy'. Makes the client's deploy hook, which the site's pipeline calls after every deploy. Each call reads the sitemap, compares it with the last one, and submits the new and changed pages to IndexNow; the first call records the baseline only. A Forumulate webhook subscribed to page.live can point at it too: each published page is submitted when it goes live and noted on the timeline as a publish. Returns hookId and url (neither is secret), secret (sent as Authorization: Bearer; shown only here), webhookUrl (the secret in the path, only for senders that cannot set a header, such as Netlify, Vercel, Cloudflare Pages and Forumulate; treat that whole URL as a secret) and howToCall for each platform. A client that already has a hook is refused with hook_exists and nothing changes; rotate_deploy_hook replaces the secret. With ifMissing: true an existing hook is left alone and returned as {created: false} without a secret, so a provisioning script can run it on every deploy safely. Free.
+   * Answers 'tell search engines whenever we deploy'. Makes the client's deploy hook, which the site's pipeline calls after every deploy. Each call reads the sitemap, compares it with the last one, and submits the new and changed pages to IndexNow; the first call records the baseline only. A Forumulate webhook subscribed to page.live can point at it too: each published page is submitted when it goes live and noted on the timeline as a publish. Returns hookId and url (neither is secret), secret (sent as Authorization: Bearer; shown only here), webhookUrl (the secret in the path, only for senders that cannot set a header, such as Netlify, Vercel, Cloudflare Pages and Forumulate; treat that whole URL as a secret, since tools print URLs; it works for as long as the hook does, by design, and pathUrl: false leaves it out of the answer) and howToCall for each platform. A client that already has a hook is refused with hook_exists and nothing changes; rotate_deploy_hook replaces the secret. With ifMissing: true an existing hook is left alone and returned as {created: false} without a secret, so a provisioning script can run it on every deploy safely. Free.
    *
    * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
    */
