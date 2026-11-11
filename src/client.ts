@@ -15,7 +15,7 @@ import type { Discovery } from "./types.js";
 export const DEFAULT_BASE_URL = "https://seolyticize.com";
 
 /** The SDK's own version, sent as the user agent so a support ticket can name it. */
-export const SDK_VERSION = "0.5.4";
+export const SDK_VERSION = "0.5.5";
 
 export type FetchLike = (url: string, init: RequestInit) => Promise<Response>;
 
@@ -38,6 +38,11 @@ export type ClientOptions = {
   maxRetryAfterSeconds?: number;
   /** Injected for tests so a retry does not have to wait in real time. */
   sleep?: (ms: number) => Promise<void>;
+  /**
+   * Sent as X-Seolyticize-Client, so Seolyticize can tell an out-of-date
+   * install. Default "sdk/<SDK_VERSION>"; a tool built on the SDK names itself.
+   */
+  client?: string;
 };
 
 export type CallOptions = {
@@ -208,6 +213,7 @@ export function createClient(options: ClientOptions): SeolyticizeClient {
         authorization: `Bearer ${options.apiKey}`,
         accept: "application/json",
         "user-agent": `seolyticize-sdk/${SDK_VERSION}`,
+        "x-seolyticize-client": options.client ?? `sdk/${SDK_VERSION}`,
         ...(method === "POST" ? { "content-type": "application/json" } : {}),
         ...(idempotencyKey ? { "idempotency-key": idempotencyKey } : {}),
       },

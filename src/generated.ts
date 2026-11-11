@@ -877,6 +877,8 @@ export interface ToolInputs {
       /** Constraints: min items 1, max items 50. */
       paths: string[];
     }[];
+    /** True to drop pageviews on paths the site's robots.txt disallows for "*" (X-Seolyticize-Dropped: robots_disallowed); a custom event there is kept without its path. robots.txt is re-read every 10 minutes; while it is missing or cannot be read, nothing is dropped. Left out, unchanged. */
+    respectRobots?: boolean;
   };
   /** Input for get_web_analytics_summary: Site traffic summary (first-party). */
   get_web_analytics_summary: {
@@ -904,11 +906,29 @@ export interface ToolInputs {
       | "channels"
       | "ai_sources"
       | "ai_landing_pages"
-      | "partners";
+      | "partners"
+      | "props";
     /** The period: the last 7, 30 or 90 days, today included. Defaults to 30. */
     days?: 7 | 30 | 90;
     /** Constraints: min 1, max 100. Defaults to 25. */
     limit?: number;
+    /** With breakdown "props": the custom-event property to list, as sent in p. Constraints: min length 1, max length 40. */
+    propName?: string;
+  };
+  /** Input for get_web_analytics_realtime: Who is on the site now (first-party). */
+  get_web_analytics_realtime: {
+    /** Constraints: min length 1. */
+    clientId: string;
+  };
+  /** Input for import_analytics_csv: Import visits from Plausible or Umami. */
+  import_analytics_csv: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    source: "plausible" | "umami";
+    /** The CSV file's text, header row first. Constraints: min length 1, max length 5000000. */
+    csv: string;
+    /** True to do nothing and get back exactly what the call would do: the rows it would write, the addresses it would submit, the emails it would send. Defaults to false. */
+    dryRun?: boolean;
   };
   /** Input for get_ai_visibility_setup: AI visibility setup. */
   get_ai_visibility_setup: {
@@ -1474,11 +1494,18 @@ export interface ToolInputs {
     cooldownHours?: number;
     /** Constraints: max length 2048, format uri. */
     webhookUrl?: string;
-    channel?: "slack" | "webhook" | "discord" | "email" | "telegram";
+    channel?:
+      "slack" | "webhook" | "discord" | "email" | "telegram" | "watchtower" | "hermetica";
     /** Constraints: max items 10. */
     emailRecipients?: string[];
     /** Constraints: min length 2, max length 64. */
     telegramChatId?: string;
+    /** watchtower: a Watchtower API key for the project; hermetica: the client's Hermetica secret key (hm_sk_…, with messages:send). Stored sealed and never shown again. Constraints: min length 8, max length 512. */
+    apiKey?: string;
+    /** watchtower: the project id, as in /v1/projects/{prj}. Constraints: min length 1, max length 64. */
+    watchtowerProjectId?: string;
+    /** hermetica: the sender address, verified in the Hermetica workspace. Constraints: format email, pattern ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$. */
+    hermeticaFrom?: string;
     paidSource?: boolean;
   };
   /** Input for update_alert_rule: Update an alert rule. */
@@ -1492,10 +1519,17 @@ export interface ToolInputs {
     /** Constraints: min 0, max 720. */
     cooldownHours?: number;
     webhookUrl?: string | null;
-    channel?: "slack" | "webhook" | "discord" | "email" | "telegram";
+    channel?:
+      "slack" | "webhook" | "discord" | "email" | "telegram" | "watchtower" | "hermetica";
     /** Constraints: max items 10. */
     emailRecipients?: string[];
     telegramChatId?: string | null;
+    /** watchtower: a Watchtower API key for the project; hermetica: the client's Hermetica secret key (hm_sk_…, with messages:send). Stored sealed and never shown again. Constraints: min length 8, max length 512. */
+    apiKey?: string;
+    /** watchtower: the project id, as in /v1/projects/{prj}. Constraints: min length 1, max length 64. */
+    watchtowerProjectId?: string;
+    /** hermetica: the sender address, verified in the Hermetica workspace. Constraints: format email, pattern ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$. */
+    hermeticaFrom?: string;
     paused?: boolean;
     paidSource?: boolean;
   };
@@ -2034,6 +2068,7 @@ export interface ToolInputs {
       excludePaths?: string[];
       /** Constraints: max items 50. */
       pathTemplates?: string[];
+      respectRobots?: boolean;
       /** Constraints: max items 10. */
       partners?: {
         /** Constraints: min length 1, max length 40. */
@@ -2057,6 +2092,7 @@ export interface ToolInputs {
       telegramChatId?: string;
       /** Constraints: max items 1. */
       include?: "page-changes"[];
+      uptimeMonitoredElsewhere?: boolean;
     };
     /** Constraints: max items 100. */
     facts?: Array<{
@@ -2200,6 +2236,24 @@ export interface ToolInputs {
   get_deploy_hook: {
     /** Constraints: min length 1. */
     clientId: string;
+  };
+  /** Input for link_content_platform: Link a content platform's host. */
+  link_content_platform: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** forumulate for a Forumulate site; other for any CMS or docs host. */
+    kind: "forumulate" | "other";
+    /** The bare host the pages are served on: formflow.forumulate.com. Constraints: min length 1, max length 253. */
+    host: string;
+    /** The host's sitemap; found from its robots.txt or /sitemap.xml when left out. Constraints: max length 2048, format uri. */
+    sitemapUrl?: string;
+  };
+  /** Input for set_deploy_hook_sender_secret: Let a sender sign deploy hook calls with its own secret. */
+  set_deploy_hook_sender_secret: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** The sender's signing secret, or null to forget it. */
+    senderSecret: string | null;
   };
   /** Input for revoke_deploy_hook: Revoke the deploy hook. */
   revoke_deploy_hook: {
@@ -5873,6 +5927,36 @@ export interface ToolInputs {
     /** Constraints: min length 1. */
     clientId: string;
   };
+  /** Input for list_collect_keys: Server collect keys and their last use. */
+  list_collect_keys: {
+    /** Constraints: min length 1. */
+    clientId: string;
+  };
+  /** Input for connect_external_events: Count sign-ups from your auth or billing system as goals. */
+  connect_external_events: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** A name for the sender, unique on this client: atlas, stripe, clerk, backend. Constraints: pattern ^[a-z0-9][a-z0-9_-]{0,39}$. */
+    sender: string;
+    /** The sender's own signing secret, for a sender that makes one (Stripe's whsec_…, a Svix endpoint's). Left out, a new secret is made for you to give the sender. Constraints: min length 16, max length 300. */
+    senderSecret?: string;
+    /** Sender event type → goal event name, e.g. {"customer.subscription.created": "Subscription started"}. Defaults to user.created, organization.created and subscription.created. */
+    events?: {
+      [key: string]: string;
+    };
+  };
+  /** Input for list_external_event_senders: Senders of signed goal events. */
+  list_external_event_senders: {
+    /** Constraints: min length 1. */
+    clientId: string;
+  };
+  /** Input for remove_external_event_sender: Stop one sender of signed goal events. */
+  remove_external_event_sender: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Constraints: pattern ^[a-z0-9][a-z0-9_-]{0,39}$. */
+    sender: string;
+  };
   /** Input for create_goal: Define a conversion goal. */
   create_goal: {
     /** Constraints: min length 1. */
@@ -6123,7 +6207,8 @@ export interface ToolInputs {
       | "jira"
       | "linear"
       | "github"
-      | "matomo";
+      | "matomo"
+      | "external_events";
   };
   /** Input for get_integration_connect_link: Link to connect by consent. */
   get_integration_connect_link: {
@@ -6444,7 +6529,8 @@ export interface ToolInputs {
     /** Constraints: min length 1. */
     clientId?: string;
     allClients?: boolean;
-    channel?: "slack" | "webhook" | "discord" | "email" | "telegram";
+    channel?:
+      "slack" | "webhook" | "discord" | "email" | "telegram" | "watchtower" | "hermetica";
     /** Constraints: max length 2048, format uri. */
     webhookUrl?: string;
     /** Constraints: max items 10. */
@@ -6453,6 +6539,8 @@ export interface ToolInputs {
     telegramChatId?: string;
     /** Constraints: max items 1. */
     include?: "page-changes"[];
+    /** true when another monitor (Watchtower, an uptime service) owns uptime: site-unreachable is not added, and one the client already has is paused (paused), so the outage is not reported twice. */
+    uptimeMonitoredElsewhere?: boolean;
   };
   /** Input for set_crawl_schedule: Set when the site is crawled. */
   set_crawl_schedule: {
@@ -6814,6 +6902,12 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
     clientScoped: true,
     readOnly: true,
   },
+  get_web_analytics_realtime: {
+    permission: "data:read",
+    clientScoped: true,
+    readOnly: true,
+  },
+  import_analytics_csv: { permission: "data:write", clientScoped: true, readOnly: false },
   get_ai_visibility_setup: {
     permission: "data:read",
     clientScoped: true,
@@ -7068,6 +7162,16 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
     readOnly: false,
   },
   get_deploy_hook: { permission: "data:read", clientScoped: true, readOnly: true },
+  link_content_platform: {
+    permission: "client:manage",
+    clientScoped: true,
+    readOnly: false,
+  },
+  set_deploy_hook_sender_secret: {
+    permission: "client:manage",
+    clientScoped: true,
+    readOnly: false,
+  },
   revoke_deploy_hook: {
     permission: "client:manage",
     clientScoped: true,
@@ -7673,6 +7777,22 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
     clientScoped: true,
     readOnly: false,
   },
+  list_collect_keys: { permission: "data:read", clientScoped: true, readOnly: true },
+  connect_external_events: {
+    permission: "client:manage",
+    clientScoped: true,
+    readOnly: false,
+  },
+  list_external_event_senders: {
+    permission: "data:read",
+    clientScoped: true,
+    readOnly: true,
+  },
+  remove_external_event_sender: {
+    permission: "client:manage",
+    clientScoped: true,
+    readOnly: false,
+  },
   create_goal: { permission: "data:write", clientScoped: true, readOnly: false },
   list_goals: { permission: "data:read", clientScoped: true, readOnly: true },
   delete_goal: { permission: "data:write", clientScoped: true, readOnly: false },
@@ -7932,7 +8052,7 @@ export interface ToolMethods {
   /**
    * Get site audit summary.
    *
-   * Technical issues one crawl found, grouped by rule: each with its name, severity, category, how many pages it affects and howToFix. Answers 'what is broken on the site'. crawlId defaults to the latest completed crawl. Then list_issue_pages shows which pages an issue is on. indexableOnly (default true) leaves out findings on pages search engines will not index as themselves — noindexed, not answering 200, or canonicalised elsewhere — except the findings that explain why; pass false to see everything. Findings accepted as intentional (accept_issue) are taken out of the counts and listed apart in accepted, each with its reason; with path owners set (set_path_owners), each issue says how its pages split between owners (owners) and byOwner totals them.
+   * Technical issues one crawl found, grouped by rule: each with its name, severity, category, how many pages it affects and howToFix. Answers 'what is broken on the site'. crawlId defaults to the latest completed crawl. Then list_issue_pages shows which pages an issue is on. indexableOnly (default true) leaves out findings on pages search engines will not index as themselves — noindexed, not answering 200, or canonicalised elsewhere — except the findings that explain why; pass false to see everything. Findings accepted as intentional (accept_issue) are taken out of the counts and listed apart in accepted, each with its reason; with path owners set (set_path_owners), each issue says how its pages split between owners (owners) and byOwner totals them. fixes groups the same findings by URL template (the client's analytics pathTemplates, then paths that differ in one segment under a common prefix, /templates/*): one row per rule and template with its pages, an example page and sharedMessage (the message most of its pages share: the template's one cause), the rule's pages that fit no template in one row of their own; issuesFound counts distinct fixes (one per rule and template, plus one per page that fits no template) and findingPages the pages behind them, accepted findings left out of both. A template row over 50 pages carries acceptIssue, the accept_issue call (dryRun) for when those pages are that way on purpose.
    *
    * Requires `data:read`. Client-scoped, read-only.
    */
@@ -8685,7 +8805,7 @@ export interface ToolMethods {
   /**
    * Is web analytics installed.
    *
-   * Whether Seolyticize's own cookieless web analytics is set up for a client, with the one-line tracking snippet to install (it sends the page's origin and path and never its query string, except utm_* campaign tags, nor its fragment), the site key, collectUrl for sending events from your own code (get_collect_contract has the fields and limits), the hostnames allowed to report, and lastEventAt (null until the first visit is recorded). Answers 'is the tracking script installed' and 'what snippet do I add to the site'. configured is false when no snippet has been created yet. Free.
+   * Whether Seolyticize's own cookieless web analytics is set up for a client, with the one-line tracking snippet to install (it sends the page's origin and path and never its query string, except utm_* campaign tags, nor its fragment), siteKey (the public key the snippet carries as data-site-key or data-site; not the internal site_ id in crawl ids), collectUrl for sending events from your own code (get_collect_contract has the fields and limits), the hostnames allowed to report, includePaths, excludePaths and respectRobots with rules (what the server records and drops, in sentences: the server's settings win over the snippet's data-include and data-exclude), clients (the newest version of each Seolyticize package seen reporting), and lastEventAt (null until the first visit is recorded). Answers 'is the tracking script installed' and 'what snippet do I add to the site'. configured is false when no snippet has been created yet. Free.
    *
    * Requires `data:read`. Client-scoped, read-only.
    */
@@ -8721,7 +8841,7 @@ export interface ToolMethods {
   /**
    * Site traffic summary (first-party).
    *
-   * Visitors, visits, pageviews, views per visit, bounce rate and average visit duration from Seolyticize's own web analytics, against the same span before (previous is null when that span was not fully measured), plus a daily series, realtimeVisitors in the last 30 minutes, and notes on how figures are counted. Answers 'how much traffic did the site get' for a client without GA4. Visitors are counted per day without cookies; a figure of null means not measured, not zero. Refuses with a sentence when web analytics has not been set up for the client. Free.
+   * Visitors, visits, pageviews, views per visit, bounce rate and average visit duration from Seolyticize's own web analytics, against the same span before (previous is null when that span was not fully measured), plus a daily series, realtimeVisitors in the last 30 minutes, and notes on how figures are counted. Days before the site's own first event that were imported with import_analytics_csv are filled in the daily series (imported: true) and totalled in imported, never added to summary. Answers 'how much traffic did the site get' for a client without GA4. Visitors are counted per day without cookies; a figure of null means not measured, not zero. Refuses with a sentence when web analytics has not been set up for the client. Free.
    *
    * Requires `data:read`. Client-scoped, read-only.
    */
@@ -8733,12 +8853,36 @@ export interface ToolMethods {
   /**
    * Traffic by page, source, campaign, country or device (first-party).
    *
-   * Lists the top rows of one breakdown from Seolyticize's own web analytics: pages (pageviews), entry_pages and exit_pages (visits), sources and referrers (visits; key null means direct), campaigns (visits, with detail "source / medium"), countries (ISO codes; null means unknown), devices, browsers, os, custom events (event count), channels (visits by channel: AI, Organic Search, Paid Search, Social, Email, Referral, Campaign, Direct), ai_sources (visits from each AI assistant: ChatGPT, Perplexity, Gemini, Copilot, Claude, Google AI Mode and others), ai_landing_pages (the pages AI assistants send visits to, detail naming the assistant) or partners (pageviews by who served the page: "site" for the site's own, or each partner declared with set_up_web_analytics). Each row has key, visitors and count; counts says what count counts, and totalKeys how many rows exist before the limit. Answers 'which pages and sources drive visits'. Refuses with a sentence when web analytics has not been set up for the client. Free.
+   * Lists the top rows of one breakdown from Seolyticize's own web analytics: pages (pageviews), entry_pages and exit_pages (visits), sources and referrers (visits; key null means direct), campaigns (visits, with detail "source / medium"), countries (ISO codes; null means unknown), devices, browsers, os, custom events (event count), channels (visits by channel: AI, Organic Search, Paid Search, Social, Email, Referral, Campaign, Direct), ai_sources (visits from each AI assistant: ChatGPT, Perplexity, Gemini, Copilot, Claude, Google AI Mode and others), ai_landing_pages (the pages AI assistants send visits to, detail naming the assistant), partners (pageviews by who served the page: "site" for the site's own, or each partner declared with set_up_web_analytics) or props (the values of one custom-event property named in propName, such as "variant", with event counts). Each row has key, visitors and count; counts says what count counts, and totalKeys how many rows exist before the limit. Answers 'which pages and sources drive visits'. Refuses with a sentence when web analytics has not been set up for the client. Free.
    *
    * Requires `data:read`. Client-scoped, read-only.
    */
   get_web_analytics_breakdown<T = unknown>(
     input: ToolInputs["get_web_analytics_breakdown"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Who is on the site now (first-party).
+   *
+   * Visitors on the site in the last 5 minutes, from Seolyticize's own web analytics, and topPages: the pages they viewed in that time (path, visitors, pageviews), most visitors first. Answers 'is anyone on the site right now' and 'did the deploy break tracking'. Refuses with a sentence when web analytics has not been set up for the client. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  get_web_analytics_realtime<T = unknown>(
+    input: ToolInputs["get_web_analytics_realtime"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Import visits from Plausible or Umami.
+   *
+   * Imports daily visitors, visits and pageviews from another analytics tool's CSV export, so the months before Seolyticize's tag was installed are not empty: Plausible's imported_visitors.csv (or visitors.csv) from its export zip, or Umami's website_event.csv (counted per day) or a daily table with date, visitors and pageviews. Only daily totals are imported, not pages or sources. Imported days show in get_web_analytics_summary only before the site's own first event; importing a day again replaces it. Answers with the days, range and totals read and the lines skipped. Refuses with a sentence when web analytics has not been set up for the client. Free.
+   *
+   * Requires `data:write`. Client-scoped, changes state; not retried on 5xx.
+   */
+  import_analytics_csv<T = unknown>(
+    input: ToolInputs["import_analytics_csv"],
     options?: CallOptions,
   ): Promise<T>;
 
@@ -9030,7 +9174,7 @@ export interface ToolMethods {
   /**
    * Get a client.
    *
-   * One client's settings with its projects, sites and rank trackers (each with its frequency: daily, weekly, monthly or manual, set with update_rank_tracker), whether the paid weekly domain sweep runs (domainSweep, set with set_domain_sweep), and the analytics siteKey and collectUrl (null before set_up_web_analytics). Answers 'what is set up for this client' — use it to find tracker, project and site ids before changing anything.
+   * One client's settings with its domains (client.domains), projects, sites and rank trackers (each with its frequency: daily, weekly, monthly or manual, set with update_rank_tracker), whether the paid weekly domain sweep runs (domainSweep, set with set_domain_sweep), and the analytics siteKey and collectUrl (null before set_up_web_analytics). Answers 'what is set up for this client' — use it to find tracker, project and site ids before changing anything.
    *
    * Requires `data:read`. Client-scoped, read-only.
    */
@@ -9114,7 +9258,7 @@ export interface ToolMethods {
   /**
    * Site verification and connection status.
    *
-   * For a client's sites: whether the IndexNow key file has been published and verified, which Search Console properties are connected and syncing, and the latest crawl. Answers 'is this site set up and verified'.
+   * For a client's sites: whether the IndexNow key file has been published and verified, which Search Console properties are connected and syncing, the latest crawl, and coveredHosts: every host the client's pages are served on (the site's domain, then content platforms linked with link_content_platform), each with whether the analytics counts it, the deploy hook sitemaps read on it and whether the crawl covers it. Answers 'is this site set up and verified' and 'which hosts does Seolyticize watch'.
    *
    * Requires `data:read`. Client-scoped, read-only.
    */
@@ -9246,7 +9390,7 @@ export interface ToolMethods {
   /**
    * List site audit issues.
    *
-   * Technical issues one crawl found, by rule: its readable label, severity, category, how many pages it affects, and howToFix — concrete steps to fix it and check the fix. Lists what to fix; list_issue_pages with a ruleId gives the pages themselves, each with what was found on it. Use crawlId 'latest' for the newest completed crawl. indexableOnly (default true) leaves out findings on pages search engines will not index as themselves — noindexed, not answering 200, or canonicalised elsewhere — except the findings that explain why; pass false to see everything.
+   * Technical issues one crawl found, by rule: its readable label, severity, category, how many pages it affects, and howToFix — concrete steps to fix it and check the fix. Lists what to fix; list_issue_pages with a ruleId gives the pages themselves, each with what was found on it. Use crawlId 'latest' for the newest completed crawl. indexableOnly (default true) leaves out findings on pages search engines will not index as themselves — noindexed, not answering 200, or canonicalised elsewhere — except the findings that explain why; pass false to see everything. fixes groups the same findings by URL template (the client's analytics pathTemplates, then paths that differ in one segment under a common prefix, /templates/*): one row per rule and template with its pages, an example page and sharedMessage (the message most of its pages share: the template's one cause), the rule's pages that fit no template in one row of their own; issuesFound counts distinct fixes (one per rule and template, plus one per page that fits no template) and findingPages the pages behind them, accepted findings left out of both. A template row over 50 pages carries acceptIssue, the accept_issue call (dryRun) for when those pages are that way on purpose.
    *
    * Requires `data:read`. Client-scoped, read-only.
    */
@@ -9306,7 +9450,7 @@ export interface ToolMethods {
   /**
    * Create an alert rule.
    *
-   * Raises an alert when a client's rankings, traffic, issues or backlinks cross a threshold, or the site goes down, and delivers it by channel. Threshold by kind: rank-drop positions fallen; traffic-drop percent lost; new-critical-issues and backlinks-lost a count; serp-features features lost (or won); competitor-new-pages new pages one tracked competitor's sitemap gained; page-changes own pages whose title, meta description, H1 or canonical changed, went noindex or 404 between the last two audits; ai-mention-drop percentage points the client's AI mention or citation rate fell from the previous check; competitor-new-keywords tracked keywords one competitor started ranking for; web-mentions new pages our crawl found naming the brand; link-velocity referring domains gained or lost in one day, far above that domain's own baseline, for the client or a tracked competitor. The watch kinds look back to their last firing (a week at most) and stay silent until there is something to compare. Channels: slack (webhookUrl, Slack's format; the default), webhook (webhookUrl, plain JSON), discord (webhookUrl, the channel's Discord webhook as Discord shows it), email (emailRecipients, up to ten) or telegram (telegramChatId, with the agency's bot from Settings). Webhooks must be https and public. With no channel and no destination, the alert goes to the agency owner's email and deliveryNote says so; a channel named without its field is refused as no_delivery_target. paidSource (competitor-new-keywords and web-mentions only; off by default; needs spend permission) also buys the signal from DataForSEO on every sweep: for competitor-new-keywords, Labs ranked keywords each tracker competitor (up to 5) newly ranks for at the tracker's market, not only tracked keywords; for web-mentions, pages DataForSEO's content index first saw naming the brand, off the client's own domains. The sweep is hourly but a purchase is reused from the archive while fresh, so it buys at most once a week per competitor (once a day for mentions); it is capped by the client's monthly budget, and a failed or over-budget read falls back to the free signal. Quote it first with estimate_cost. Answers 'tell me when rankings drop'.
+   * Raises an alert when a client's rankings, traffic, issues or backlinks cross a threshold, or the site goes down, and delivers it by channel. Threshold by kind: rank-drop positions fallen; traffic-drop percent lost; new-critical-issues and backlinks-lost a count; serp-features features lost (or won); competitor-new-pages new pages one tracked competitor's sitemap gained; page-changes own pages whose title, meta description, H1 or canonical changed, went noindex or 404 between the last two audits; ai-mention-drop percentage points the client's AI mention or citation rate fell from the previous check; competitor-new-keywords tracked keywords one competitor started ranking for; web-mentions new pages our crawl found naming the brand; link-velocity referring domains gained or lost in one day, far above that domain's own baseline, for the client or a tracked competitor. The watch kinds look back to their last firing (a week at most) and stay silent until there is something to compare. Channels: slack (webhookUrl, Slack's format; the default), webhook (webhookUrl, plain JSON), discord (webhookUrl, the channel's Discord webhook as Discord shows it), email (emailRecipients, up to ten) telegram (telegramChatId, with the agency's bot from Settings), watchtower (apiKey and watchtowerProjectId: posts an event to that Watchtower project with POST /v1/projects/{prj}/events, alert_type error, warning or info by severity, source seolyticize, aggregation_key the rule id, tags kind:<kind> and client:<clientId>, and the detail and links in its text) or hermetica (apiKey, hermeticaFrom and emailRecipients: the alert email sent through the client's own Hermetica account with POST /v1/transactional/send). The apiKey is stored sealed and never returned. Webhooks must be https and public. With no channel and no destination, the alert goes to the agency owner's email and deliveryNote says so; a channel named without its field is refused as no_delivery_target. paidSource (competitor-new-keywords and web-mentions only; off by default; needs spend permission) also buys the signal from DataForSEO on every sweep: for competitor-new-keywords, Labs ranked keywords each tracker competitor (up to 5) newly ranks for at the tracker's market, not only tracked keywords; for web-mentions, pages DataForSEO's content index first saw naming the brand, off the client's own domains. The sweep is hourly but a purchase is reused from the archive while fresh, so it buys at most once a week per competitor (once a day for mentions); it is capped by the client's monthly budget, and a failed or over-budget read falls back to the free signal. Quote it first with estimate_cost. Answers 'tell me when rankings drop'.
    *
    * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -9318,7 +9462,7 @@ export interface ToolMethods {
   /**
    * Update an alert rule.
    *
-   * Changes a rule's threshold, cooldown or delivery (channel, webhookUrl — null removes it — emailRecipients, telegramChatId), or pauses and resumes it, or turns its paidSource on or off. Answers 'this alert is too noisy', 'send this to email instead' or 'mute this for now'. Pausing keeps the rule's history. paidSource (competitor-new-keywords and web-mentions only; off by default; needs spend permission) also buys the signal from DataForSEO on every sweep: for competitor-new-keywords, Labs ranked keywords each tracker competitor (up to 5) newly ranks for at the tracker's market, not only tracked keywords; for web-mentions, pages DataForSEO's content index first saw naming the brand, off the client's own domains. The sweep is hourly but a purchase is reused from the archive while fresh, so it buys at most once a week per competitor (once a day for mentions); it is capped by the client's monthly budget, and a failed or over-budget read falls back to the free signal. Quote it first with estimate_cost.
+   * Changes a rule's threshold, cooldown or delivery (channel, webhookUrl — null removes it — emailRecipients, telegramChatId, apiKey, watchtowerProjectId, hermeticaFrom), or pauses and resumes it, or turns its paidSource on or off. Answers 'this alert is too noisy', 'send this to email instead' or 'mute this for now' (pause the site-unreachable rule when another monitor owns uptime). Pausing keeps the rule's history. paidSource (competitor-new-keywords and web-mentions only; off by default; needs spend permission) also buys the signal from DataForSEO on every sweep: for competitor-new-keywords, Labs ranked keywords each tracker competitor (up to 5) newly ranks for at the tracker's market, not only tracked keywords; for web-mentions, pages DataForSEO's content index first saw naming the brand, off the client's own domains. The sweep is hourly but a purchase is reused from the archive while fresh, so it buys at most once a week per competitor (once a day for mentions); it is capped by the client's monthly budget, and a failed or over-budget read falls back to the free signal. Quote it first with estimate_cost.
    *
    * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -9966,7 +10110,7 @@ export interface ToolMethods {
   /**
    * Move a client to a new domain.
    *
-   * Answers 'the site moved to a new domain'. Keeps the client, its history and its analytics site key, and moves everything that follows the domain: the site and its rank trackers, the analytics hostnames (the old ones are still accepted for overlapDays, then refused), and the deploy hook (same URL; its next call records a fresh baseline). Issues a Google verification for the new domain and returns the deploy manifest to put on it (IndexNow key file, verification file, tag or TXT record), and adds a 'Domain moved' note to the timeline. Then deploy the manifest on the new domain and call verify_site, which verifies it and adds the new Search Console property. Free.
+   * Answers 'the site moved to a new domain'. Keeps the client, its history and its analytics site key, and moves everything that follows the domain: the site, its rank trackers (frequency unchanged), its own brand in AI visibility, the IndexNow key, the analytics hostnames (the old ones are still accepted for overlapDays, then refused), and the deploy hook (same URL; sitemaps on the old domain follow, others are listed in otherHosts; its next call records a fresh baseline). Never changes the budget or the domain sweep. notMoved names what cannot follow, with the next step. Safe to repeat: a second call answers alreadyMoved: true with the same manifest and changes nothing. Issues a Google verification for the new domain and returns the deploy manifest to put on it (IndexNow key file, verification file, tag or TXT record), and adds a 'Domain moved' note to the timeline. When the new domain already proves ownership (a DNS TXT record added beforehand), it connects the new Search Console property at once, as a Domain property; searchConsoleProperty says which, or names verify_site. Otherwise deploy the manifest on the new domain and call verify_site, which verifies it and adds the property. The order of every step: https://seolyticize.com/docs/move-a-site. Free.
    *
    * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -10074,7 +10218,7 @@ export interface ToolMethods {
   /**
    * Create a deploy hook.
    *
-   * Answers 'tell search engines whenever we deploy'. Makes the client's deploy hook, which the site's pipeline calls after every deploy. Each call reads the sitemap, compares it with the last one, and submits the new and changed pages to IndexNow; the first call records the baseline only. A Forumulate webhook subscribed to page.live can point at it too: each published page is submitted when it goes live and noted on the timeline as a publish. Returns hookId and url (neither is secret), secret (sent as Authorization: Bearer; shown only here), webhookUrl (the secret in the path, only for senders that cannot set a header, such as Netlify, Vercel, Cloudflare Pages and Forumulate; treat that whole URL as a secret, since tools print URLs; it works for as long as the hook does, by design, and pathUrl: false leaves it out of the answer) and howToCall for each platform. A client that already has a hook is refused with hook_exists and nothing changes; rotate_deploy_hook replaces the secret. With ifMissing: true an existing hook is left alone and returned as {created: false} without a secret, so a provisioning script can run it on every deploy safely. Free.
+   * Answers 'tell search engines whenever we deploy'. Makes the client's deploy hook, which the site's pipeline calls after every deploy. Each call reads the sitemap, compares it with the last one, and submits the new and changed pages to IndexNow; the first call records the baseline only. A Forumulate webhook subscribed to page.live can point at it too: each published page is submitted when it goes live and noted on the timeline as a publish. Calls to url carry the secret as Authorization: Bearer, or sign the raw body with it (Seolyticize-Signature: t=<unix>,v1=<hex HMAC-SHA256 of <t>.<body>>, as create_webhook signs, within 5 minutes), or come signed by a Forumulate webhook whose secret was given to set_deploy_hook_sender_secret. A body may carry {release: {ref, source, environment, time}}, the release marker shared with other tools, shown on the timeline note. Returns hookId and url (neither is secret), secret (sent as Authorization: Bearer or used to sign; shown only here), webhookUrl (the secret in the path, only for senders that cannot set a header, such as Netlify, Vercel, Cloudflare Pages and Forumulate; treat that whole URL as a secret, since tools print URLs; it works for as long as the hook does, by design, and pathUrl: false leaves it out of the answer) and howToCall for each platform. A client that already has a hook is refused with hook_exists and nothing changes; rotate_deploy_hook replaces the secret. With ifMissing: true an existing hook is left alone and returned as {created: false} without a secret, so a provisioning script can run it on every deploy safely. Free.
    *
    * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -10098,12 +10242,36 @@ export interface ToolMethods {
   /**
    * Get the deploy hook's status.
    *
-   * Answers 'did the last deploy notify search engines' and 'does this client have a deploy hook'. exists, then (when it does) the hook's createdAt, lastCalledAt (the last call, whatever came of it), lastRunAt (the last run that read a sitemap), lastResult (led by the call's source and ref in brackets when it sent them), how many sitemap pages it knows, and howToCall.coolify: the post-deploy command, which reads the URL and secret from SEOLYTICIZE_DEPLOY_HOOK_URL and SEOLYTICIZE_DEPLOY_HOOK_SECRET. hookId is not secret. Never the secret itself: a lost one is replaced with rotate_deploy_hook. Free.
+   * Answers 'did the last deploy notify search engines' and 'does this client have a deploy hook'. exists, then (when it does) the hook's createdAt, lastCalledAt (the last call, whatever came of it), lastRunAt (the last run that read a sitemap), lastResult (led by the call's source and ref in brackets when it sent them), how many sitemap pages it knows, url (the address to call; not secret, the value of SEOLYTICIZE_DEPLOY_HOOK_URL), signing (hookSecret: signed calls work; senderSecret: a sender's own secret is set) and howToCall: anyPipeline, signed (the body signed with Seolyticize-Signature, no secret in the URL), coolify (a git build's post-deployment command), prebuiltImage (seolyticize-notify-deploy --wait-for from the deploy script), githubActions, vercel, forumulate and knownPages. Every call belongs after the new version serves; ref is free text. hookId is not secret. Never the secret itself: a lost one is replaced with rotate_deploy_hook. Free.
    *
    * Requires `data:read`. Client-scoped, read-only.
    */
   get_deploy_hook<T = unknown>(
     input: ToolInputs["get_deploy_hook"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Link a content platform's host.
+   *
+   * Answers 'our help, blog or legal pages live on another host (Forumulate, a docs platform)'. Links a host serving the client's pages to the client: adds it to the cookieless analytics hostnames (a visit from a host not listed is refused), and adds its sitemap (sitemapUrl, else each Sitemap: line of the host's robots.txt, else /sitemap.xml, kept only when it answers as a sitemap) to the deploy hook's sitemaps, keeping the hook's secret and baseline, so each call reads its new and changed pages and submits them to IndexNow (which accepts them only when the IndexNow key file is also served on that host). get_site_status lists it under coveredHosts and get_next_steps under content_platform. The site crawl does not follow it: a crawl stays on the client's own domain. On the Forumulate side (from its public guides): set the site key from get_web_analytics_setup as the seolyticize field of PUT /orgs/{orgId}/analytics-tags (or a site's or space's), which sends pageviews with no script, gated as first-party measurement by the consent settings (firstPartyAnalytics); robots.txt names the host's sitemap; and a webhook of kind deploy_hook (events page.published or page.live) pointed at create_deploy_hook's webhookUrl calls the hook after each publish with ?source=forumulate&ref=<event>, which get_deploy_hook's lastResult shows. Forumulate's deploy_hook sends no header, so it needs the webhookUrl holding the secret. Safe to repeat. Free.
+   *
+   * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
+   */
+  link_content_platform<T = unknown>(
+    input: ToolInputs["link_content_platform"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Let a sender sign deploy hook calls with its own secret.
+   *
+   * Answers 'Forumulate signs its webhooks, let it call the deploy hook without a secret in the URL'. Stores a sender's own signing secret (a Forumulate webhook's whsec_…, answered once when the webhook is made) on the client's deploy hook, sealed. A call to the hook's url signed with it (X-Forumulate-Signature v1 over X-Forumulate-Timestamp, within 5 minutes) is then accepted, beside the hook's own secret. null forgets it. The hook's own secret is untouched. Never returned. Free.
+   *
+   * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
+   */
+  set_deploy_hook_sender_secret<T = unknown>(
+    input: ToolInputs["set_deploy_hook_sender_secret"],
     options?: CallOptions,
   ): Promise<T>;
 
@@ -12906,7 +13074,7 @@ export interface ToolMethods {
   /**
    * What changed on the fields search engines read.
    *
-   * Compares each page's status, robots directives (meta and X-Robots-Tag), canonical, hreflang, title, H1 and structured data types between two crawls (default: the latest and the one before), counted by field and by URL template, with every change listed. Critical: noindex added, canonical changed, title dropped, 200 to 404/5xx, hreflang lost, H1 rewritten (under half its words kept) — the changes that cost rankings within days, the first five of which each crawl also files as regression-* issues. Warning: meta description changed, Open Graph tags removed, structured data values changed (schema hash), a Core Web Vital p75 more than 20% worse in Chrome's field data, a template's Lighthouse performance down 10 points or more. Notice: H2 outline changed, page copy changed (body hash). The description, og, h2 and body fields compare only crawls that recorded them. fields, severity and template narrow it. Answers 'what did the last release break', 'did a template lose its canonicals' and 'why did these pages drop out'. Free.
+   * Compares each page's status, robots directives (meta and X-Robots-Tag), canonical, hreflang, title, H1 and structured data types between two crawls (default: the latest and the one before), counted by field and by URL template, with every change listed. Critical: noindex added, canonical changed, title dropped, 200 to 404/5xx, hreflang lost, H1 rewritten (under half its words kept) — the changes that cost rankings within days, the first five of which each crawl also files as regression-* issues. Warning: meta description changed, Open Graph tags removed, structured data values changed (schema hash), a Core Web Vital p75 more than 20% worse in Chrome's field data, a template's Lighthouse performance down 10 points or more. Notice: H2 outline changed, page copy changed (body hash). The description, og, h2 and body fields compare only crawls that recorded them. fields, severity and template narrow it. deploys lists the deploy notes on the timeline between the two crawls (the deploy hook writes one per call, titled with its source, ref and environment), so each change reads beside the release that shipped it. Answers 'what did the last release break', 'did a template lose its canonicals' and 'why did these pages drop out'. Free.
    *
    * Requires `data:read`. Client-scoped, read-only.
    */
@@ -13188,6 +13356,54 @@ export interface ToolMethods {
    */
   issue_server_collect_key<T = unknown>(
     input: ToolInputs["issue_server_collect_key"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Server collect keys and their last use.
+   *
+   * The client's server collect keys, never the keys themselves: the active one and the one the last issue_server_collect_key replaced, each with id (the first 12 hex characters of its SHA-256), status (active or revoked), createdAt, revokedAt and lastUsedAt (to about a minute). A revoked key is refused, but each refused use is still recorded, so a rotation is confirmed when the active key's lastUsedAt moves and the revoked one's stops. Answers 'is the old collect key still in use somewhere' and 'did the new key reach production'. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  list_collect_keys<T = unknown>(
+    input: ToolInputs["list_collect_keys"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Count sign-ups from your auth or billing system as goals.
+   *
+   * Makes a system that signs its webhooks (an auth provider, a billing system, your own backend) a source of goal events, with no call from the app. A client can have several senders (auth for sign-ups, billing for subscriptions), each named by sender and all posting to one webhookUrl; a delivery belongs to the sender whose secret verifies it. Adds the sender, or replaces the one of that name. Returns webhookUrl to register with the sender and secret (whsec_…, shown only here; calling again for the sender replaces it) to give it as the signing secret; a sender that makes its own secret (Stripe, Svix, Clerk) has it passed as senderSecret instead. Accepts Standard Webhooks signatures (webhook-*, svix-* or atlas-* headers) and t=,v1= signatures (Stripe-Signature, Seolyticize-Signature), five minutes' tolerance, a retried delivery counted once. Each event whose type is in the sender's events (default user.created → Signup, organization.created → Organization created, subscription.created → Subscription started) is recorded as that goal event with the sender as its source property, credited to the visit whose token (from seolyticize("visit") or useVisit()) the event's object carries as seolyticize_visit, directly or in its metadata (public_metadata, unsafe_metadata, metadata, user_metadata, raw_user_meta_data, custom_data), so the goal report shows the landing page and source of the visit that signed up. An event without a token, or of a type not in events, is acknowledged and not counted. Needs the cookieless analytics set up. list_external_event_senders lists them; remove_external_event_sender drops one; disconnect_integration {provider: "external_events"} drops all. Answers 'count sign-ups from our auth provider', 'count Stripe subscriptions as goals' and 'stop sending the Signup goal by hand'. Free.
+   *
+   * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
+   */
+  connect_external_events<T = unknown>(
+    input: ToolInputs["connect_external_events"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Senders of signed goal events.
+   *
+   * The client's connect_external_events senders, each with name and events (its event type → goal event name), and the webhookUrl they all post to; never a secret. null webhookUrl and no senders when none is connected. Answers 'which systems send us sign-ups'. Free.
+   *
+   * Requires `data:read`. Client-scoped, read-only.
+   */
+  list_external_event_senders<T = unknown>(
+    input: ToolInputs["list_external_event_senders"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Stop one sender of signed goal events.
+   *
+   * Drops one connect_external_events sender: its deliveries are refused from now on, and the client's other senders keep working at the same webhookUrl. removed false when there is no sender of that name. Removing the last one removes the connection. Answers 'stop counting sign-ups from Clerk'. Free.
+   *
+   * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
+   */
+  remove_external_event_sender<T = unknown>(
+    input: ToolInputs["remove_external_event_sender"],
     options?: CallOptions,
   ): Promise<T>;
 
@@ -13626,7 +13842,7 @@ export interface ToolMethods {
   /**
    * Add the default alerts.
    *
-   * Gives a client the four alerts every new client now starts with: the site goes down (site-unreachable), non-branded Search Console clicks fall 30% or more week on week (traffic-drop 30), a crawl finds critical issues (new-critical-issues 1), and a tracked keyword drops 5 or more places (rank-drop 5). Each goes to the agency owner's email until changed with update_alert_rule. A kind the client already has a rule for is kept as it is, so it is safe to repeat. channel with webhookUrl (slack, webhook, discord), emailRecipients (email) or telegramChatId (telegram) sends them there instead, and moves default rules still going only to the owner's email (moved). include: ["page-changes"] adds a fifth: own pages whose title, meta description, H1 or canonical changed, went noindex or 404. Pass clientId for one client, or allClients: true for every live client the key may manage. Answers 'set up the usual alerts'. Free.
+   * Gives a client the four alerts every new client now starts with: the site goes down (site-unreachable), non-branded Search Console clicks fall 30% or more week on week (traffic-drop 30), a crawl finds critical issues (new-critical-issues 1), and a tracked keyword drops 5 or more places (rank-drop 5). Each goes to the agency owner's email until changed with update_alert_rule. A kind the client already has a rule for is kept as it is, so it is safe to repeat. channel with webhookUrl (slack, webhook, discord), emailRecipients (email) or telegramChatId (telegram) sends them there instead, and moves default rules still going only to the owner's email (moved). uptimeMonitoredElsewhere: true leaves site-unreachable out (and pauses an existing one) when another monitor owns uptime. include: ["page-changes"] adds a fifth: own pages whose title, meta description, H1 or canonical changed, went noindex or 404. Pass clientId for one client, or allClients: true for every live client the key may manage. Answers 'set up the usual alerts'. Free.
    *
    * Requires `client:manage`. Agency-wide, changes state; not retried on 5xx.
    */
