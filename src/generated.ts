@@ -6208,7 +6208,11 @@ export interface ToolInputs {
       | "linear"
       | "github"
       | "matomo"
-      | "external_events";
+      | "external_events"
+      | "posthog"
+      | "lucida"
+      | "datadog"
+      | "umami";
   };
   /** Input for get_integration_connect_link: Link to connect by consent. */
   get_integration_connect_link: {
@@ -6523,6 +6527,25 @@ export interface ToolInputs {
     compare?: boolean;
     /** Constraints: min 1, max 500. Defaults to 25. */
     limit?: number;
+  };
+  /** Input for connect_analytics_source: Use PostHog, Lucida, Datadog RUM or Umami as the traffic source. */
+  connect_analytics_source: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    provider: "posthog" | "lucida" | "datadog" | "umami";
+    /** Constraints: min length 1, max length 100. */
+    project: string;
+    /** Constraints: min length 8, max length 500. */
+    key: string;
+    /** Defaults to null. */
+    appKey?: string | null;
+    /** Defaults to null. */
+    host?: string | null;
+  };
+  /** Input for import_analytics_now: Import from the connected analytics tool now. */
+  import_analytics_now: {
+    /** Constraints: min length 1. */
+    clientId: string;
   };
   /** Input for add_default_alerts: Add the default alerts. */
   add_default_alerts: {
@@ -7861,6 +7884,12 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
   score_eeat: { permission: "data:read", clientScoped: true, readOnly: false },
   draft_seo_strategy: { permission: "spend:incur", clientScoped: true, readOnly: false },
   get_matomo_report: { permission: "data:read", clientScoped: true, readOnly: true },
+  connect_analytics_source: {
+    permission: "client:manage",
+    clientScoped: true,
+    readOnly: false,
+  },
+  import_analytics_now: { permission: "data:write", clientScoped: true, readOnly: false },
   add_default_alerts: {
     permission: "client:manage",
     clientScoped: false,
@@ -13836,6 +13865,30 @@ export interface ToolMethods {
    */
   get_matomo_report<T = unknown>(
     input: ToolInputs["get_matomo_report"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Use PostHog, Lucida, Datadog RUM or Umami as the traffic source.
+   *
+   * Reads the client's pageviews and custom events from the analytics tool the site already runs, every hour, so the traffic, goal, funnel and revenue reports work without our tag. PostHog: project (the project id) and key (a personal API key with Query Read); host https://eu.posthog.com for EU Cloud or a self-hosted address. Lucida: project (the project id) and key (a project secret or account key with insight:read); host for your own Lucida. Datadog: project (the RUM application id) and key (a personal or service access token with rum_apps_read), or key (an API key) with appKey (an application key); host the site's API host, like https://api.datadoghq.eu. Umami: project (the website id) and key (an API key); host for self-hosted, with /api left off. The last 30 days are imported straight away; tools that only give totals (Plausible, Fathom) use import_analytics_csv. Needs set_up_web_analytics first. Don't also run our tag on the same pages, or visits count twice. Free.
+   *
+   * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
+   */
+  connect_analytics_source<T = unknown>(
+    input: ToolInputs["connect_analytics_source"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Import from the connected analytics tool now.
+   *
+   * Imports the pageviews and events the connected analytics tool (connect_analytics_source) recorded since the last import; the hourly import does this on its own. Answers 'pull in today's PostHog traffic'. Free.
+   *
+   * Requires `data:write`. Client-scoped, changes state; not retried on 5xx.
+   */
+  import_analytics_now<T = unknown>(
+    input: ToolInputs["import_analytics_now"],
     options?: CallOptions,
   ): Promise<T>;
 
