@@ -9468,7 +9468,7 @@ export interface ToolMethods {
   /**
    * List alert rules.
    *
-   * What a client's alerts watch for, at what threshold, and whether each is paused and can be delivered (hasDeliveryTarget false: it fires into nothing; undeliverable lists those rules with the fix). Lists the rules; list_recent_alerts lists what they fired. add_default_alerts adds the starting four.
+   * What a client's alerts watch for, at what threshold, and whether each is paused and can be delivered (hasDeliveryTarget false: it fires into nothing, undeliverableBecause says why, e.g. no address or no email provider on this deployment; undeliverable lists those rules with the fix). Lists the rules; list_recent_alerts lists what they fired. add_default_alerts adds the starting four.
    *
    * Requires `data:read`. Client-scoped, read-only.
    */
