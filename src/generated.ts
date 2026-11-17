@@ -1501,7 +1501,7 @@ export interface ToolInputs {
     emailRecipients?: string[];
     /** Constraints: min length 2, max length 64. */
     telegramChatId?: string;
-    /** watchtower: a Watchtower API key for the project; hermetica: the client's Hermetica secret key (hm_sk_…, with messages:send). Stored sealed and never shown again. Constraints: min length 8, max length 512. */
+    /** watchtower: a Watchtower service-account key (wta_…) holding only events:write, the narrowest that can post events (an ingest wti_ key is refused there with 403); hermetica: the client's Hermetica secret key (hm_sk_…, with messages:send). Stored sealed and never shown again. Constraints: min length 8, max length 512. */
     apiKey?: string;
     /** watchtower: the project id, as in /v1/projects/{prj}. Constraints: min length 1, max length 64. */
     watchtowerProjectId?: string;
@@ -1525,7 +1525,7 @@ export interface ToolInputs {
     /** Constraints: max items 10. */
     emailRecipients?: string[];
     telegramChatId?: string | null;
-    /** watchtower: a Watchtower API key for the project; hermetica: the client's Hermetica secret key (hm_sk_…, with messages:send). Stored sealed and never shown again. Constraints: min length 8, max length 512. */
+    /** watchtower: a Watchtower service-account key (wta_…) holding only events:write, the narrowest that can post events (an ingest wti_ key is refused there with 403); hermetica: the client's Hermetica secret key (hm_sk_…, with messages:send). Stored sealed and never shown again. Constraints: min length 8, max length 512. */
     apiKey?: string;
     /** watchtower: the project id, as in /v1/projects/{prj}. Constraints: min length 1, max length 64. */
     watchtowerProjectId?: string;
@@ -1547,6 +1547,13 @@ export interface ToolInputs {
     clientId: string;
     /** Constraints: min length 1. */
     ruleId: string;
+  };
+  /** Input for redeliver_alert: Send an alert again. */
+  redeliver_alert: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Constraints: min length 1. */
+    alertId: string;
   };
   /** Input for get_vendor_connections: Which vendor accounts are connected. */
   get_vendor_connections: Record<string, never>;
@@ -2006,7 +2013,8 @@ export interface ToolInputs {
       | "nuxt"
       | "html"
       | "wordpress"
-      | "other";
+      | "other"
+      | "next";
     /** Constraints: max items 500. */
     keywords?: string[];
     /** file (a page at the site root, the default), meta (a tag in the <head>) or dns (a TXT record, which also covers every subdomain and protocol). Defaults to "file". */
@@ -2015,6 +2023,8 @@ export interface ToolInputs {
     healthKey?: boolean;
     /** How often the client's rank tracker runs once it has keywords: weekly is the default for a new tracker. Applied to an existing client's trackers too. update_rank_tracker changes it later. */
     trackerFrequency?: "daily" | "weekly" | "monthly" | "manual";
+    /** True to write nothing and get the plan: what it would create, whether the plan has room for the client (planAllows, planRefusal), what the site must serve and the analytics install with a placeholder key. Uses no allowance. Defaults to false. */
+    dryRun?: boolean;
   };
   /** Input for apply_manifest: Bring a client to what its repo declares. */
   apply_manifest: {
@@ -2149,11 +2159,24 @@ export interface ToolInputs {
   verify_site: {
     /** Constraints: min length 1. */
     clientId: string;
+    /** Fetch the IndexNow key file again even when it verified before. Every fetch asks past caches (cache-control: no-cache and a unique query), and a failure names the final URL, status, content type, bytes, age and cf-cache-status it saw. */
+    recheck?: boolean;
   };
   /** Input for get_next_steps: What to do next for a site. */
   get_next_steps: {
     /** Constraints: min length 1. */
     clientId: string;
+  };
+  /** Input for dismiss_next_step: Set a next step aside. */
+  dismiss_next_step: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Constraints: min length 1, max length 64. */
+    id: string;
+    /** Constraints: min length 3, max length 300. */
+    reason?: string;
+    /** Defaults to false. */
+    restore?: boolean;
   };
   /** Input for bootstrap_keywords: Free keyword ideas for a new site. */
   bootstrap_keywords: {
@@ -6571,7 +6594,8 @@ export interface ToolInputs {
     /** Constraints: min length 1. */
     clientId: string;
     cadence: "off" | "daily" | "weekly" | "monthly";
-    day?: number | null;
+    /** Weekly: 0 Sunday to 6 Saturday, or the day's name. Monthly: 1–28. */
+    day?: number | string | null;
     hour?: number | null;
   };
   /** Input for accept_issue: Accept an audit issue as intentional. */
@@ -7035,6 +7059,7 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
   update_alert_rule: { permission: "client:manage", clientScoped: true, readOnly: false },
   delete_alert_rule: { permission: "client:manage", clientScoped: true, readOnly: false },
   test_alert_rule: { permission: "client:manage", clientScoped: true, readOnly: false },
+  redeliver_alert: { permission: "client:manage", clientScoped: true, readOnly: false },
   get_vendor_connections: {
     permission: "agency:settings",
     clientScoped: false,
@@ -7161,6 +7186,7 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
   move_site: { permission: "client:manage", clientScoped: true, readOnly: false },
   verify_site: { permission: "client:manage", clientScoped: true, readOnly: false },
   get_next_steps: { permission: "data:read", clientScoped: true, readOnly: true },
+  dismiss_next_step: { permission: "client:manage", clientScoped: true, readOnly: false },
   bootstrap_keywords: { permission: "data:read", clientScoped: true, readOnly: true },
   issue_site_verification: {
     permission: "client:manage",
@@ -9171,7 +9197,7 @@ export interface ToolMethods {
   /**
    * Who am I connected as.
    *
-   * Says who this connection is: the agency, whether it is an API key or a person, the role, every permission that role holds, the clients it can reach, and vendorBalanceUsable (false when the agency's DataForSEO balance is empty and paid calls fail, null with no key of its own or when it cannot be read). Answers 'what can this key do'. Call it first when unsure whether a task is allowed. Free.
+   * Says who this connection is: the agency, whether it is an API key or a person, the role, every permission that role holds, the clients it can reach, and vendorBalanceUsable (false when the agency's DataForSEO balance is empty and paid calls fail, null with no key of its own or when it cannot be read), the plan in force (planLapsed says when a bought plan's subscription has lapsed to trial limits; get_billing has usage), and reach: the routes a key calls. Answers 'what can this key do'. Call it first when unsure whether a task is allowed. Free.
    *
    * Requires `data:read`. Agency-wide, read-only.
    */
@@ -9480,7 +9506,7 @@ export interface ToolMethods {
   /**
    * Create an alert rule.
    *
-   * Raises an alert when a client's rankings, traffic, issues or backlinks cross a threshold, or the site goes down, and delivers it by channel. Threshold by kind: rank-drop positions fallen; traffic-drop percent lost; new-critical-issues and backlinks-lost a count; serp-features features lost (or won); competitor-new-pages new pages one tracked competitor's sitemap gained; page-changes own pages whose title, meta description, H1 or canonical changed, went noindex or 404 between the last two audits; ai-mention-drop percentage points the client's AI mention or citation rate fell from the previous check; competitor-new-keywords tracked keywords one competitor started ranking for; web-mentions new pages our crawl found naming the brand; link-velocity referring domains gained or lost in one day, far above that domain's own baseline, for the client or a tracked competitor. The watch kinds look back to their last firing (a week at most) and stay silent until there is something to compare. Channels: slack (webhookUrl, Slack's format; the default), webhook (webhookUrl, plain JSON), discord (webhookUrl, the channel's Discord webhook as Discord shows it), email (emailRecipients, up to ten) telegram (telegramChatId, with the agency's bot from Settings), watchtower (apiKey and watchtowerProjectId: posts an event to that Watchtower project with POST /v1/projects/{prj}/events, alert_type error, warning or info by severity, source seolyticize, aggregation_key the rule id, tags kind:<kind> and client:<clientId>, and the detail and links in its text) or hermetica (apiKey, hermeticaFrom and emailRecipients: the alert email sent through the client's own Hermetica account with POST /v1/transactional/send). The apiKey is stored sealed and never returned. Webhooks must be https and public. With no channel and no destination, the alert goes to the agency owner's email and deliveryNote says so; a channel named without its field is refused as no_delivery_target. paidSource (competitor-new-keywords and web-mentions only; off by default; needs spend permission) also buys the signal from DataForSEO on every sweep: for competitor-new-keywords, Labs ranked keywords each tracker competitor (up to 5) newly ranks for at the tracker's market, not only tracked keywords; for web-mentions, pages DataForSEO's content index first saw naming the brand, off the client's own domains. The sweep is hourly but a purchase is reused from the archive while fresh, so it buys at most once a week per competitor (once a day for mentions); it is capped by the client's monthly budget, and a failed or over-budget read falls back to the free signal. Quote it first with estimate_cost. Answers 'tell me when rankings drop'.
+   * Raises an alert when a client's rankings, traffic, issues or backlinks cross a threshold, or the site goes down, and delivers it by channel. Threshold by kind: rank-drop positions fallen; traffic-drop percent lost; new-critical-issues and backlinks-lost a count; serp-features features lost (or won); competitor-new-pages new pages one tracked competitor's sitemap gained; page-changes own pages whose title, meta description, H1 or canonical changed, went noindex or 404 between the last two audits; ai-mention-drop percentage points the client's AI mention or citation rate fell from the previous check; competitor-new-keywords tracked keywords one competitor started ranking for; web-mentions new pages our crawl found naming the brand; link-velocity referring domains gained or lost in one day, far above that domain's own baseline, for the client or a tracked competitor. The watch kinds look back to their last firing (a week at most) and stay silent until there is something to compare. Channels: slack (webhookUrl, Slack's format; the default), webhook (webhookUrl, plain JSON), discord (webhookUrl, the channel's Discord webhook as Discord shows it), email (emailRecipients, up to ten) telegram (telegramChatId, with the agency's bot from Settings), watchtower (apiKey, a service-account wta_ key with events:write, and watchtowerProjectId: posts an event to that Watchtower project with POST /v1/projects/{prj}/events, alert_type error, warning or info by severity, source seolyticize, aggregation_key the rule id, tags kind:<kind> and client:<clientId>, and the detail and links in its text) or hermetica (apiKey, hermeticaFrom and emailRecipients: the alert email sent through the client's own Hermetica account with POST /v1/transactional/send). The apiKey is stored sealed and never returned. Webhooks must be https and public. With no channel and no destination, the alert goes to the agency owner's email and deliveryNote says so; a channel named without its field is refused as no_delivery_target. paidSource (competitor-new-keywords and web-mentions only; off by default; needs spend permission) also buys the signal from DataForSEO on every sweep: for competitor-new-keywords, Labs ranked keywords each tracker competitor (up to 5) newly ranks for at the tracker's market, not only tracked keywords; for web-mentions, pages DataForSEO's content index first saw naming the brand, off the client's own domains. The sweep is hourly but a purchase is reused from the archive while fresh, so it buys at most once a week per competitor (once a day for mentions); it is capped by the client's monthly budget, and a failed or over-budget read falls back to the free signal. Quote it first with estimate_cost. Answers 'tell me when rankings drop'.
    *
    * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -9522,6 +9548,18 @@ export interface ToolMethods {
    */
   test_alert_rule<T = unknown>(
     input: ToolInputs["test_alert_rule"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Send an alert again.
+   *
+   * Sends one alert that already fired (alertId is its id from list_recent_alerts) down its rule's channel as it is set now, and records the outcome on the alert: delivered and deliveryNote. Answers 'the site-down alert never reached us, send it again' after fixing where the rule delivers. A send that fails for a passing reason (a 5xx, 429 or timeout) is already tried again on its own, with backoff, for 3 hours after firing; deliveryNote says when. Sends even an alert that was delivered, so the channel gets it twice. Free.
+   *
+   * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
+   */
+  redeliver_alert<T = unknown>(
+    input: ToolInputs["redeliver_alert"],
     options?: CallOptions,
   ): Promise<T>;
 
@@ -10170,6 +10208,18 @@ export interface ToolMethods {
    */
   get_next_steps<T = unknown>(
     input: ToolInputs["get_next_steps"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Set a next step aside.
+   *
+   * Answers 'we have no GA4, stop listing it'. Marks one get_next_steps item as not applicable for this client, with the reason (google_analytics: 'the site has no GA4'; vendor_balance or search_data: 'no paid SEO data, by the owner's choice'). The item stays in items with its live status and dismissed {reason, at}, but leaves missing and blocked, so health no longer turns degraded on it and a real gap is not lost among chosen ones. restore: true brings it back. The required items (site, indexnow, search_console, web_analytics, crawl) cannot be set aside. Safe to repeat. Free.
+   *
+   * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
+   */
+  dismiss_next_step<T = unknown>(
+    input: ToolInputs["dismiss_next_step"],
     options?: CallOptions,
   ): Promise<T>;
 
