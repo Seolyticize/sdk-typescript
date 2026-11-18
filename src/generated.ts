@@ -1489,8 +1489,8 @@ export interface ToolInputs {
       | "competitor-new-keywords"
       | "web-mentions"
       | "link-velocity";
-    /** Constraints: min 1, max 9007199254740991. */
-    threshold: number;
+    /** Required, except for site-unreachable and new-critical-issues, where it is 1. Constraints: min 1, max 9007199254740991. */
+    threshold?: number;
     /** Constraints: min 0, max 720. */
     cooldownHours?: number;
     /** Constraints: max length 2048, format uri. */
@@ -9338,7 +9338,7 @@ export interface ToolMethods {
   /**
    * Create a rank tracker.
    *
-   * Starts tracking a client's positions on one engine, device and locale. Answers 'track this client on Bing too' or 'track mobile separately'. Defaults to the client's first project and site domain. Engine and locale cannot be changed later — they are part of every keyword's identity — so a different market is a new tracker. A locale can be a city, county or region, not only a country: search_locations finds the code. Cadence daily, weekly, monthly or manual, at a chosen UTC hour and day; depth 10–200; match the exact host, its subdomains, or a URL prefix.
+   * Starts tracking a client's positions on one engine, device and locale. warnings says vendor_balance_empty when the agency's DataForSEO balance is at or below zero, when the tracker captures nothing until it is topped up. Answers 'track this client on Bing too' or 'track mobile separately'. Defaults to the client's first project and site domain. Engine and locale cannot be changed later — they are part of every keyword's identity — so a different market is a new tracker. A locale can be a city, county or region, not only a country: search_locations finds the code. Cadence daily, weekly, monthly or manual, at a chosen UTC hour and day; depth 10–200; match the exact host, its subdomains, or a URL prefix.
    *
    * Requires `data:write`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -10298,7 +10298,7 @@ export interface ToolMethods {
   /**
    * Create a deploy hook.
    *
-   * Answers 'tell search engines whenever we deploy'. Makes the client's deploy hook, which the site's pipeline calls after every deploy. Each call reads the sitemap, compares it with the last one, and submits the new and changed pages to IndexNow; the first call records the baseline only. A Forumulate webhook subscribed to page.live can point at it too: each published page is submitted when it goes live and noted on the timeline as a publish. Calls to url carry the secret as Authorization: Bearer, or sign the raw body with it (Seolyticize-Signature: t=<unix>,v1=<hex HMAC-SHA256 of <t>.<body>>, as create_webhook signs, within 5 minutes), or come signed by a Forumulate webhook whose secret was given to set_deploy_hook_sender_secret. A body may carry {release: {ref, source, environment, time}}, the release marker shared with other tools, shown on the timeline note. Returns hookId and url (neither is secret), secret (sent as Authorization: Bearer or used to sign; shown only here), webhookUrl (the secret in the path, only for senders that cannot set a header or sign, such as Netlify, Vercel, Cloudflare Pages and Forumulate's deploy_hook kind; treat that whole URL as a secret, since tools print URLs; it works for as long as the hook does, by design, and pathUrl: false leaves it out of the answer) and howToCall for each platform. A client that already has a hook is refused with hook_exists and nothing changes; rotate_deploy_hook replaces the secret. With ifMissing: true an existing hook is left alone and returned as {created: false} without a secret, so a provisioning script can run it on every deploy safely. Free.
+   * Answers 'tell search engines whenever we deploy'. Makes the client's deploy hook, which the site's pipeline calls after every deploy. Each call reads the sitemap, compares it with the last one, and submits the new and changed pages to IndexNow; the first call records the baseline only. A Forumulate webhook subscribed to page.live can point at it too: each published page is submitted when it goes live and noted on the timeline as a publish. Calls to url carry the secret as Authorization: Bearer, or sign the raw body with it (Seolyticize-Signature: t=<unix>,v1=<hex HMAC-SHA256 of <t>.<body>>, as create_webhook signs, within 5 minutes), or come signed by a Forumulate webhook whose secret was given to set_deploy_hook_sender_secret. A body may carry {release: {ref, source, environment, time}}, the release marker shared with other tools, shown on the timeline note. Returns hookId and url (neither is secret), secret (sent as Authorization: Bearer or used to sign; shown only here; the hook URL alone does not authenticate), env (the SEOLYTICIZE_DEPLOY_HOOK_ID and SEOLYTICIZE_DEPLOY_HOOK_SECRET lines for the pipeline's env file, which seolyticize-notify-deploy reads), webhookUrl (the secret in the path, only for senders that cannot set a header or sign, such as Netlify, Vercel, Cloudflare Pages and Forumulate's deploy_hook kind; treat that whole URL as a secret, since tools print URLs; it works for as long as the hook does, by design, and pathUrl: false leaves it out of the answer) and howToCall for each platform. A client that already has a hook is refused with hook_exists and nothing changes; rotate_deploy_hook replaces the secret. With ifMissing: true an existing hook is left alone and returned as {created: false} without a secret, so a provisioning script can run it on every deploy safely. Free.
    *
    * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
    */
