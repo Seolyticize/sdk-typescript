@@ -21,6 +21,8 @@ export type ToolDescriptor = {
   path: string;
   /** JSON Schema (draft 2020-12) for the input. */
   inputSchema: Record<string, unknown>;
+  /** Set on a tool on its way out: since when, its sunset, and what to call instead. */
+  deprecated?: { since: string; sunset?: string; use?: string };
 };
 
 /** Who the presented key is, as far as the API will say. */

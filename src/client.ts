@@ -17,6 +17,9 @@ export { SDK_VERSION };
 
 export const DEFAULT_BASE_URL = "https://seolyticize.com";
 
+/** How many times a call that answered 202 is collected before giving up: ten minutes at 5 s. */
+const MAX_POLLS = 120;
+
 export type FetchLike = (url: string, init: RequestInit) => Promise<Response>;
 
 export type ClientOptions = {
@@ -68,6 +71,28 @@ export type ResponseMeta = {
   next: Array<{ tool: string; args: Record<string, unknown>; why: string }>;
   nextCursor: string | null;
   dryRun?: true;
+  /** On every tool that is not read-only: whether the call did the thing. */
+  outcome?: Outcome;
+  /** Why a noop, skipped or partial: already_exists, already_running, unchanged, not_found, dry_run… */
+  reason?: string;
+  /** Set when the tool is deprecated (also the Deprecation and Sunset headers). */
+  deprecated?: { since: string; sunset?: string; use?: string };
+};
+
+/**
+ * applied (it did it), noop (already so), partial (some failed), skipped (dry
+ * run, not delivered, refused) or queued (a job will do it).
+ */
+export type Outcome = "applied" | "noop" | "partial" | "skipped" | "queued";
+
+/** What callWithMeta answers. A write also says whether it changed anything. */
+export type CallResult<T> = {
+  data: T;
+  meta: ResponseMeta | null;
+  /** On writes: meta.outcome, beside the data. */
+  outcome?: Outcome;
+  /** On writes: true when the outcome is applied, partial or queued. */
+  changed?: boolean;
 };
 
 /**
@@ -98,12 +123,12 @@ export type SeolyticizeClient = {
     name: N,
     input: ToolInputs[N],
     options?: CallOptions,
-  ): Promise<{ data: T; meta: ResponseMeta | null }>;
+  ): Promise<CallResult<T>>;
   callWithMeta<T = unknown>(
     name: string,
     input?: unknown,
     options?: CallOptions,
-  ): Promise<{ data: T; meta: ResponseMeta | null }>;
+  ): Promise<CallResult<T>>;
   /** The catalogue as this key sees it, and who the key is. */
   listTools(options?: CallOptions): Promise<Discovery>;
   /** One typed method per tool known when this SDK was generated. */
@@ -160,6 +185,8 @@ type FailureBody = {
   code: string | undefined;
   next: string | undefined;
   requestId: string | undefined;
+  allowed?: string[] | undefined;
+  didYouMean?: Record<string, string> | undefined;
 };
 
 /** The API's error body: the sentence, and the code, next step and request id beside it. */
@@ -174,6 +201,11 @@ async function failureFrom(response: Response): Promise<FailureBody> {
       next: text(body["next"]),
       requestId:
         text(body["requestId"]) ?? response.headers.get("x-request-id") ?? undefined,
+      allowed: Array.isArray(body["allowed"]) ? (body["allowed"] as string[]) : undefined,
+      didYouMean:
+        body["didYouMean"] && typeof body["didYouMean"] === "object"
+          ? (body["didYouMean"] as Record<string, string>)
+          : undefined,
     };
   } catch {
     // A proxy in front of the API can answer with HTML; the status still speaks.
@@ -231,17 +263,14 @@ export function createClient(options: ClientOptions): SeolyticizeClient {
     tool: string | undefined,
     callOptions: CallOptions | undefined,
   ): Promise<T> {
+    // A slow call answers 202 with a key; the same body under it collects the answer.
+    let key = callOptions?.idempotencyKey;
+    let polls = 0;
     for (let tries = 0; ; tries += 1) {
       const canRetry = tries < maxRetries;
       let response: Response;
       try {
-        response = await attempt(
-          method,
-          path,
-          body,
-          callOptions?.signal,
-          callOptions?.idempotencyKey,
-        );
+        response = await attempt(method, path, body, callOptions?.signal, key);
       } catch (cause) {
         // A caller's own abort is an instruction, not a fault to retry past.
         if (callOptions?.signal?.aborted) throw cause;
@@ -257,12 +286,30 @@ export function createClient(options: ClientOptions): SeolyticizeClient {
 
       lastRateLimit = rateLimitFrom(response.headers) ?? lastRateLimit;
 
+      const status = response.status;
+      const waitSeconds = retryAfterSeconds(response.headers, Date.now());
+      // Still running: 202, or 409 for a key of our own that a 202 told us to poll with.
+      if (status === 202 || (status === 409 && polls > 0)) {
+        const pending = (await response.json()) as {
+          idempotencyKey?: string;
+          pollAfterSeconds?: number;
+        };
+        key = pending.idempotencyKey ?? key;
+        if (key !== undefined && polls < MAX_POLLS) {
+          polls += 1;
+          tries -= 1;
+          await sleep((pending.pollAfterSeconds ?? waitSeconds ?? 5) * 1000);
+          continue;
+        }
+        throw new SeolyticizeError(
+          `${tool ?? "The call"} is still running. Send the same body again with Idempotency-Key: ${key} for its answer.`,
+          { status, tool, code: "still_running" },
+        );
+      }
+
       if (response.ok) {
         return (await response.json()) as T;
       }
-
-      const status = response.status;
-      const waitSeconds = retryAfterSeconds(response.headers, Date.now());
 
       if (status === 429 && canRetry) {
         // Waiting less than the server asked for only earns another 429, and
@@ -283,6 +330,8 @@ export function createClient(options: ClientOptions): SeolyticizeClient {
         code: failure.code,
         next: failure.next,
         requestId: failure.requestId,
+        allowed: failure.allowed,
+        didYouMean: failure.didYouMean,
         tool,
         rateLimit: rateLimitFrom(response.headers) ?? undefined,
         retryAfterSeconds: waitSeconds,
@@ -294,7 +343,7 @@ export function createClient(options: ClientOptions): SeolyticizeClient {
     name: string,
     input?: unknown,
     callOptions?: CallOptions,
-  ) {
+  ): Promise<CallResult<T>> {
     // A tool this SDK has never heard of may be a read or a write; it is
     // treated as a write, because guessing wrong the other way repeats a write.
     const known = (toolMeta as Record<string, { readOnly: boolean } | undefined>)[name];
@@ -316,7 +365,18 @@ export function createClient(options: ClientOptions): SeolyticizeClient {
       name,
       idempotencyKey === undefined ? callOptions : { ...callOptions, idempotencyKey },
     );
-    return { data: envelope.data, meta: envelope.meta ?? null };
+    const outcome = envelope.meta?.outcome;
+    return {
+      data: envelope.data,
+      meta: envelope.meta ?? null,
+      ...(outcome
+        ? {
+            outcome,
+            changed:
+              outcome === "applied" || outcome === "partial" || outcome === "queued",
+          }
+        : {}),
+    };
   }
 
   async function call<T>(name: string, input?: unknown, callOptions?: CallOptions) {

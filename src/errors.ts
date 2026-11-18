@@ -26,6 +26,10 @@ export type SeolyticizeErrorOptions = {
   next?: string | undefined;
   /** Quote this when asking for help: it matches the server's log line. */
   requestId?: string | undefined;
+  /** On an unknown argument: the arguments the tool takes there. */
+  allowed?: string[] | undefined;
+  /** On an unknown argument: the allowed name each unknown one most likely meant. */
+  didYouMean?: Record<string, string> | undefined;
   cause?: unknown;
 };
 
@@ -36,6 +40,8 @@ export class SeolyticizeError extends Error {
   readonly code: string | undefined;
   readonly next: string | undefined;
   readonly requestId: string | undefined;
+  readonly allowed: string[] | undefined;
+  readonly didYouMean: Record<string, string> | undefined;
 
   constructor(message: string, options: SeolyticizeErrorOptions) {
     super(message, options.cause === undefined ? undefined : { cause: options.cause });
@@ -46,6 +52,8 @@ export class SeolyticizeError extends Error {
     this.code = options.code;
     this.next = options.next;
     this.requestId = options.requestId;
+    this.allowed = options.allowed;
+    this.didYouMean = options.didYouMean;
   }
 }
 

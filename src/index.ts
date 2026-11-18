@@ -3,6 +3,8 @@ export type {
   ClientOptions,
   CallOptions,
   ResponseMeta,
+  Outcome,
+  CallResult,
   FetchLike,
   SeolyticizeClient,
 } from "./client.js";
