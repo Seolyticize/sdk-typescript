@@ -95,6 +95,23 @@ const { caller, tools } = await seo.listTools();
 // may call with its JSON Schema.
 ```
 
+## Server-side collection
+
+`createCollector` reports page views and conversions from your server with the site's server collect key (`issue_server_collect_key`): visitors that never run JavaScript, AI assistants above all, and events that happen after the visit (`trackForVisit` hands back a visit token, `trackLater` credits a later event to it). Bots are dropped before anything is sent, and every query parameter except the campaign tags is stripped.
+
+```ts
+import { createCollector, expressCollector } from "@seolyticize/sdk";
+
+const collector = createCollector({
+  siteKey: "<site key>",
+  serverKey: process.env.SEOLYTICIZE_SERVER_COLLECT_KEY!,
+  only: "agents", // "all" when the browser tag is not installed
+});
+app.use(expressCollector(collector)); // or collector.track({ url, userAgent, ip, referrer })
+```
+
+`collectInMiddleware(collector, request, event)` does the same in an edge middleware. `@seolyticize/next/server` exports the same functions.
+
 ## Options
 
 ```ts

@@ -11,11 +11,11 @@ import {
   type ToolName,
 } from "./generated.js";
 import type { Discovery } from "./types.js";
+import { SDK_VERSION } from "./version.js";
+
+export { SDK_VERSION };
 
 export const DEFAULT_BASE_URL = "https://seolyticize.com";
-
-/** The SDK's own version, sent as the user agent so a support ticket can name it. */
-export const SDK_VERSION = "0.5.13";
 
 export type FetchLike = (url: string, init: RequestInit) => Promise<Response>;
 
