@@ -147,7 +147,7 @@ export interface ToolInputs {
     url: string;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_search_demand: What the panel saw people search for. */
@@ -185,7 +185,7 @@ export interface ToolInputs {
     strategy?: "mobile" | "desktop";
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_entity_pageviews: How many people looked a brand or topic up. */
@@ -218,7 +218,7 @@ export interface ToolInputs {
     domain: string;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for keyword_explorer: Explore keyword ideas with filters. */
@@ -286,7 +286,7 @@ export interface ToolInputs {
     format?: "rows" | "csv";
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for serp_overview: Who is on the first page for a keyword. */
@@ -303,7 +303,7 @@ export interface ToolInputs {
     refresh?: boolean;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for keyword_traffic_potential: What ranking first for a keyword is worth. */
@@ -320,7 +320,7 @@ export interface ToolInputs {
     refresh?: boolean;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for striking_distance: Queries just off the top, by page. */
@@ -547,7 +547,7 @@ export interface ToolInputs {
     urls: string[];
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for submit_yandex_recrawl: Ask Yandex to recrawl pages. */
@@ -558,7 +558,7 @@ export interface ToolInputs {
     urls: string[];
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for export_search_console_data: Export Search Console queries or pages as CSV. */
@@ -640,7 +640,7 @@ export interface ToolInputs {
     clientId: string;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for list_written_reports: List written reports. */
@@ -1008,7 +1008,7 @@ export interface ToolInputs {
     clientId: string;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_ai_visibility_runs: AI visibility checks so far. */
@@ -1090,7 +1090,7 @@ export interface ToolInputs {
     >;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for suggest_ai_prompts: Suggest questions to track. */
@@ -1103,7 +1103,7 @@ export interface ToolInputs {
     count?: number;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_ai_cited_sources: Who owns the pages AI answers cite. */
@@ -1153,7 +1153,7 @@ export interface ToolInputs {
     rejudge?: boolean;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for list_markets: Find a market's location code. */
@@ -1191,7 +1191,7 @@ export interface ToolInputs {
     top?: number;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for find_serp_competitors: Who competes across a keyword set. */
@@ -1210,7 +1210,7 @@ export interface ToolInputs {
     exclude?: string[];
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for pin_tracked_keywords: Pin tracked keywords to the top. */
@@ -1787,7 +1787,7 @@ export interface ToolInputs {
     moreTerms?: string[];
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for sync_local_reviews: Collect a location's Google reviews. */
@@ -1798,7 +1798,7 @@ export interface ToolInputs {
     locationId: string;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_local_seo_audit: Local SEO audit of a location. */
@@ -1825,7 +1825,7 @@ export interface ToolInputs {
     model?: "auto" | "storefront" | "sab" | "hybrid";
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_backlink_audit: Audit a client's backlinks. */
@@ -1851,7 +1851,7 @@ export interface ToolInputs {
     industry?: "saas" | "ecommerce" | "local" | "publisher" | "agency" | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_link_checks: Do the linking pages still link?. */
@@ -1876,7 +1876,7 @@ export interface ToolInputs {
     domains: string[];
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for list_link_prospects: List a client's link prospects. */
@@ -2342,7 +2342,7 @@ export interface ToolInputs {
     clientId: string;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for refresh_domain_data: Refresh domain and backlink data now. */
@@ -2351,7 +2351,7 @@ export interface ToolInputs {
     clientId: string;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_run_status: Get the status of a run. */
@@ -2370,7 +2370,7 @@ export interface ToolInputs {
     keyword: string;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_keyword_trends: Get Google Trends interest for terms. */
@@ -2381,7 +2381,7 @@ export interface ToolInputs {
     terms: string[];
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for estimate_domain_traffic: Estimate search traffic for domains. */
@@ -2392,7 +2392,7 @@ export interface ToolInputs {
     targets: string[];
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_subdomain_traffic: See which subdomains carry a site's search traffic. */
@@ -2403,7 +2403,7 @@ export interface ToolInputs {
     domain: string;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_domain_technologies: See what a domain is built with. */
@@ -2483,7 +2483,7 @@ export interface ToolInputs {
     onlyOlderThanDays?: number | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_search_changes: What changed in search. */
@@ -2631,7 +2631,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for build_content_brief: Build a content brief. */
@@ -2666,7 +2666,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for score_content: Score a draft before publishing. */
@@ -2684,7 +2684,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for cluster_keywords: Group keywords into topics. */
@@ -2707,7 +2707,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_topic_map: Map topics to pages. */
@@ -2732,7 +2732,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for compare_crawls: What changed since the last crawl. */
@@ -2951,7 +2951,7 @@ export interface ToolInputs {
     limit?: number;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_backlinks: Backlinks, new and lost. */
@@ -2970,7 +2970,7 @@ export interface ToolInputs {
     days?: number;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_anchor_distribution: Anchor text mix. */
@@ -2987,7 +2987,7 @@ export interface ToolInputs {
     moneyTerms?: string[];
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_best_pages_by_links: Pages that attract links. */
@@ -3002,7 +3002,7 @@ export interface ToolInputs {
     limit?: number;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_broken_backlinks: Links to broken pages. */
@@ -3015,7 +3015,7 @@ export interface ToolInputs {
     limit?: number;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_competitor_new_pages: What competitors published. */
@@ -3191,7 +3191,7 @@ export interface ToolInputs {
     minVolume?: number;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_ranked_keywords: What a domain ranks for. */
@@ -3233,7 +3233,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_top_pages: A domain's pages by traffic. */
@@ -3252,7 +3252,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_domain_overview: A domain's organic and paid standing. */
@@ -3269,7 +3269,7 @@ export interface ToolInputs {
     historyMonths?: number;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_keyword_metrics: Metrics for a list of keywords. */
@@ -3290,7 +3290,7 @@ export interface ToolInputs {
     clickstream?: boolean;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_backlink_history: A domain's backlinks over time. */
@@ -3303,7 +3303,7 @@ export interface ToolInputs {
     from?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_serp_history: Who ranked for a keyword over time. */
@@ -3322,7 +3322,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_ai_mode_answer: Google AI Mode for a keyword. */
@@ -3339,7 +3339,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_ai_brand_mentions: Brand share of voice in AI answers. */
@@ -3377,7 +3377,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_ai_prompt_research: Real questions people ask AI about a topic. */
@@ -3410,7 +3410,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_ai_search_volume: How often a topic is asked of AI. */
@@ -3425,7 +3425,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_ai_top_cited_domains: Who AI answers cite on a topic. */
@@ -3458,7 +3458,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_keyword_advertisers: Who advertises on a keyword. */
@@ -3473,7 +3473,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for update_business_profile: Change a Google Business Profile listing. */
@@ -3604,7 +3604,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for build_comparison_page: Build a comparison page. */
@@ -3631,7 +3631,7 @@ export interface ToolInputs {
     instructions?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for set_keyword_owners: Say which page owns a keyword. */
@@ -3709,7 +3709,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_freshness_queue: Pages to refresh first. */
@@ -3744,7 +3744,7 @@ export interface ToolInputs {
     readMissing?: boolean;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for plan_content: Plan the editorial calendar. */
@@ -3767,7 +3767,7 @@ export interface ToolInputs {
     includeRefreshes?: boolean;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for list_content_plan: List the editorial calendar. */
@@ -3913,7 +3913,7 @@ export interface ToolInputs {
     };
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for suggest_ai_visibility_setup: Set up AI visibility from the client's own data. */
@@ -3934,7 +3934,7 @@ export interface ToolInputs {
     apply?: boolean;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_business_profile: Any business's Google profile. */
@@ -3953,7 +3953,7 @@ export interface ToolInputs {
     lng?: number | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for search_local_businesses: Businesses in an area. */
@@ -3978,7 +3978,7 @@ export interface ToolInputs {
     limit?: number;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_business_questions: A business's Google Q&A. */
@@ -3999,7 +3999,7 @@ export interface ToolInputs {
     lng?: number | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_local_categories: Business categories in an area. */
@@ -4016,7 +4016,7 @@ export interface ToolInputs {
     categories?: string[];
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_maps_results: Google Maps results from one spot. */
@@ -4041,7 +4041,7 @@ export interface ToolInputs {
     lng?: number | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_business_reviews: Any business's Google reviews. */
@@ -4060,7 +4060,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_business_posts: Any business's Google posts. */
@@ -4079,7 +4079,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_platform_reviews: A business's Tripadvisor or Trustpilot reviews. */
@@ -4097,7 +4097,7 @@ export interface ToolInputs {
     locationCode?: number | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for search_locations: Find a location to track from. */
@@ -4130,7 +4130,7 @@ export interface ToolInputs {
     limit?: number;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_audit_performance: Speed in the audit. */
@@ -4146,7 +4146,7 @@ export interface ToolInputs {
     clientId: string;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for plan_redirect_map: Redirect map for a migration. */
@@ -4409,7 +4409,7 @@ export interface ToolInputs {
     industryDirectories?: string[] | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_trust_signals: Who stands behind the site. */
@@ -4445,7 +4445,7 @@ export interface ToolInputs {
     citedUrls?: string[];
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for check_ai_brand_accuracy: Do assistants describe the brand correctly. */
@@ -4460,7 +4460,7 @@ export interface ToolInputs {
     platforms?: Array<"chat_gpt_app" | "perplexity" | "chat_gpt" | "claude" | "gemini">;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for generate_schema: Write a page's structured data. */
@@ -4552,7 +4552,7 @@ export interface ToolInputs {
     brandMentions?: boolean;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for check_brand_entity: Does Google know the brand as an entity. */
@@ -4609,7 +4609,7 @@ export interface ToolInputs {
     trade?: "auto" | "healthcare" | "legal" | "general";
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for draft_outreach_emails: Draft outreach emails to link prospects. */
@@ -4626,7 +4626,7 @@ export interface ToolInputs {
     sender?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for post_review_reply: Post a reply to a Google review. */
@@ -4660,7 +4660,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_link_gap: Link gap against competitors. */
@@ -4679,7 +4679,7 @@ export interface ToolInputs {
     source?: "auto" | "vendor" | "index";
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_batch_analysis: Compare many domains at once. */
@@ -4694,7 +4694,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_google_trends: Google Trends for up to five keywords. */
@@ -4720,7 +4720,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for find_unlinked_mentions: Pages that name the brand but don't link to it. */
@@ -4735,7 +4735,7 @@ export interface ToolInputs {
     limit?: number;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_page_backlinks: Who links to one page. */
@@ -4750,7 +4750,7 @@ export interface ToolInputs {
     limit?: number;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_competitor_broken_pages: A competitor's dead pages that still have links. */
@@ -4767,7 +4767,7 @@ export interface ToolInputs {
     limit?: number;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_outbound_domains: Domains a site links out to. */
@@ -4795,7 +4795,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for search_web_content: Pages on the web that mention a phrase. */
@@ -4830,7 +4830,7 @@ export interface ToolInputs {
     offset?: number;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for find_link_opportunities: Resource pages, best-of lists, roundups, podcasts and newsletters for a topic. */
@@ -4857,7 +4857,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for find_journalist_requests: Journalist requests for sources, from feeds. */
@@ -4897,7 +4897,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for rewrite_section: Rewrite a section to cover what is missing. */
@@ -4924,7 +4924,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for suggest_meta_tags: Titles and descriptions for a whole crawl. */
@@ -4942,7 +4942,7 @@ export interface ToolInputs {
     format?: "rows" | "csv";
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for forecast_keyword_traffic: What a keyword set is worth at target positions. */
@@ -4979,7 +4979,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_personal_keyword_difficulty: How hard a keyword is for this site. */
@@ -5277,7 +5277,7 @@ export interface ToolInputs {
     limit?: number;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_app_metrics: How visible apps are in an app store. */
@@ -5289,7 +5289,7 @@ export interface ToolInputs {
     appIds: string[];
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_ctr_outliers: Queries clicking far from what they should. */
@@ -5456,7 +5456,7 @@ export interface ToolInputs {
     limit?: number;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for save_disavow_file: Build, keep and compare a disavow file. */
@@ -5491,7 +5491,7 @@ export interface ToolInputs {
     limit?: number;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_outreach_mailboxes: Mailboxes outreach is sent from. */
@@ -5586,7 +5586,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_shopping_serp: Google Shopping positions, now and over time. */
@@ -5645,7 +5645,7 @@ export interface ToolInputs {
     competitors?: number;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for score_app_metadata: Score an app's store listing. */
@@ -5665,7 +5665,7 @@ export interface ToolInputs {
     taskId?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_app_keyword_gap: Keywords competitor apps rank for and ours does not. */
@@ -5685,7 +5685,7 @@ export interface ToolInputs {
     limit?: number;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for mine_app_reviews: What an app's reviews keep saying. */
@@ -5705,7 +5705,7 @@ export interface ToolInputs {
     taskId?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for youtube_keyword_research: YouTube search phrases around a topic. */
@@ -5722,7 +5722,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for youtube_video_brief: A title, description and chapter brief from the top videos. */
@@ -5739,7 +5739,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_youtube_channel_rankings: Which of a channel's videos rank, for which phrases. */
@@ -5758,7 +5758,7 @@ export interface ToolInputs {
     languageCode?: string | null;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_seo_changes: What changed on the fields search engines read. */
@@ -5885,7 +5885,7 @@ export interface ToolInputs {
     device?: "desktop" | "mobile";
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for validate_structured_data: Structured data against Google's requirements. */
@@ -6612,7 +6612,7 @@ export interface ToolInputs {
     judge?: boolean;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for draft_seo_strategy: Draft an SEO strategy. */
@@ -6627,7 +6627,7 @@ export interface ToolInputs {
     save?: boolean;
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
   /** Input for get_matomo_report: Visits, pages and goals (Matomo). */
@@ -6830,7 +6830,7 @@ export interface ToolInputs {
     clientId?: string | null;
     /** Constraints: max length 2000, format uri. */
     url: string;
-    /** Constraints: min items 1, max items 14. */
+    /** Constraints: min items 1, max items 15. */
     events: Array<
       | "crawl.completed"
       | "gsc.synced"
@@ -6846,6 +6846,7 @@ export interface ToolInputs {
       | "vendor.balance_low"
       | "vendor.balance_empty"
       | "deploy_hook.processed"
+      | "processor.updated"
     >;
   };
   /** Input for list_webhooks: List webhooks. */
@@ -6896,6 +6897,7 @@ export interface ToolInputs {
       | "vendor.balance_low"
       | "vendor.balance_empty"
       | "deploy_hook.processed"
+      | "processor.updated"
       | null;
   };
   /** Input for send_test_event: Send a test event. */
@@ -6919,7 +6921,7 @@ export interface ToolInputs {
     audience?: "client" | "team";
     /** Optional spending limit for this call, in micro-USD (1,000,000 = $1). The call is checked against its quote first and refused with nothing bought (meta.costMicros 0) when the quote is over it; should purchases cost more than quoted, the call stops at the limit and meta.costMicros says what was already bought. Pass the estimate from estimate_cost, or what the user agreed to spend. Constraints: min 0, max 1000000000. */
     maxCostMicros?: number;
-    /** True to buy nothing and get the quote instead: what the call would cost at most and what it would buy. */
+    /** True to buy nothing and get the quote instead: estimatedCostMicros, the most the call would cost, and purchases, the vendor calls it would make. */
     dryRun?: boolean;
   };
 }
@@ -8427,7 +8429,7 @@ export interface ToolMethods {
   /**
    * Explore keyword ideas with filters.
    *
-   * Expands a seed term into keyword ideas, suggestions, related terms or questions, then filters, sorts and pages them: include and exclude words, volume, difficulty, cost per click and word-count ranges, questions only, search intent, and result-page features. Answers 'which terms around this topic are worth going after'. The expansion is bought once per seed, mode and market; every later filter on the same seed is free. Rows a filter cannot judge because the number is unknown are left out and counted in unknownExcluded rather than treated as zero. Set format to csv for every matching row as a CSV file.
+   * Expands a seed term into keyword ideas, suggestions, related terms or questions, then filters, sorts and pages them: include and exclude words, volume, difficulty, cost per click and word-count ranges, questions only, search intent, and result-page features. Answers 'which terms around this topic are worth going after'. The expansion is bought once per seed, mode and market; every later filter on the same seed is free. Rows a filter cannot judge because the number is unknown are left out and counted in unknownExcluded rather than treated as zero. Set format to csv for every matching row as a CSV file. When the vendor cannot answer (no credit, no credentials, an outage), it answers degraded: true with missing and ideas: the client's own Search Console queries from the last 90 days that hold a seed's words, with clicks, impressions and position but no volumes, free.
    *
    * Requires `spend:incur`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -8559,7 +8561,7 @@ export interface ToolMethods {
   /**
    * Get SERP features.
    *
-   * Which search features — featured snippet, AI Overview, local pack, video, People Also Ask and others — appeared on each tracked keyword's latest page, and which the client holds, with totals per feature. Answers 'which snippets and overviews do we own'. imagePresence covers image results across every keyword the client ranks for: how many ranking pages carry an image pack, how many show a client image, and the keywords where it ranks but has no image in the pack (best position first) — 'where should we be in image results'. Features are null for a capture whose source did not report them, which is not the same as a page with none.
+   * Which search features — featured snippet, AI Overview, local pack, video, People Also Ask and others — appeared on each tracked keyword's latest page, and which the client holds, with totals per feature. Answers 'which snippets and overviews do we own'. imagePresence covers image results across every keyword the client ranks for: how many ranking pages carry an image pack, how many show a client image, and the keywords where it ranks but has no image in the pack (best position first) — 'where should we be in image results'. Features are null for a capture whose source did not report them, which is not the same as a page with none. While the tracker has no captures yet (a new tracker, or no vendor credit), the answer is degraded: true, missing says what is lacking, and searchAppearance gives Search Console's own result kinds (rich results, FAQ, video and others) with clicks and impressions over the last 28 days, free.
    *
    * Requires `data:read`. Client-scoped, read-only.
    */
@@ -10416,7 +10418,7 @@ export interface ToolMethods {
   /**
    * Free keyword ideas for a new site.
    *
-   * Keyword ideas that cost nothing, for a site too new for Search Console rows and an agency with no vendor credit: Google autocomplete suggestions and questions around each seed (default: the site's name), and the page names in competitors' sitemaps (competitorDomains). Each idea has its source and what it came from; there are no volumes, because none of these sources publishes one — add the best to a rank tracker, or price them later with get_keyword_metrics. Answers 'what should a brand-new site target'. Free.
+   * Keyword ideas that cost nothing, for an agency with no vendor credit: the client's own Search Console queries from the last 90 days (source search_console, first), Google autocomplete suggestions and questions around each seed (default: the site's name), and the page names in competitors' sitemaps (competitorDomains). Each idea has its source and what it came from; there are no volumes, because none of these sources publishes one — add the best to a rank tracker, or price them later with get_keyword_metrics. A source that fails does not fail the call: the answer has degraded: true and missing names each source lost and why. Answers 'what should a brand-new site target'. Free.
    *
    * Requires `data:read`. Client-scoped, read-only.
    */
@@ -12912,7 +12914,7 @@ export interface ToolMethods {
   /**
    * Keyword ideas for Bing or Amazon.
    *
-   * Keyword ideas around seed terms on another engine: engine bing reads DataForSEO's Bing keywords-for-keywords (with Bing volume, CPC, competition and monthly history; English, French and German), engine amazon reads DataForSEO Labs' Amazon related keywords (with Amazon search volume; one seed). Answers 'what do people search on Amazon around this product' and 'what are the Bing variations of this term'. Google ideas are keyword_explorer. A paid lookup on the client's account unless anyone read the same thing recently (spend says which); quote it with estimate_cost.
+   * Keyword ideas around seed terms on another engine: engine bing reads DataForSEO's Bing keywords-for-keywords (with Bing volume, CPC, competition and monthly history; English, French and German), engine amazon reads DataForSEO Labs' Amazon related keywords (with Amazon search volume; one seed). Answers 'what do people search on Amazon around this product' and 'what are the Bing variations of this term'. Google ideas are keyword_explorer. When the vendor cannot answer (no credit, no credentials, an outage), it answers degraded: true with missing and ideas: the client's own Search Console queries from the last 90 days that hold a seed's words, with clicks, impressions and position but no volumes, free. A paid lookup on the client's account unless anyone read the same thing recently (spend says which); quote it with estimate_cost.
    *
    * Requires `spend:incur`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -14397,7 +14399,7 @@ export interface ToolMethods {
   /**
    * Subscribe a URL to events.
    *
-   * Sends events to an https URL as they happen, signed: each POST carries Seolyticize-Signature: t=<unix>,v1=<hex HMAC-SHA256 of "<t>.<body>" with the secret>, plus Seolyticize-Event and Seolyticize-Delivery headers. The body is {id, type, createdAt, clientId, data, deliveryId}; get_webhook_schemas has the JSON Schema of each type. Retried with backoff (1 min to a day) until a 2xx; replay_webhooks sends missed ones again, redeliver_webhook one event by its id. Events: crawl.completed, gsc.synced, rank.moved, backlink.new, backlink.lost, issue.new_critical, ai.citation.gained, ai.citation.lost, competitor.page.new, budget.threshold, alert.fired, vendor.balance_low, vendor.balance_empty, deploy_hook.processed. deploy_hook.processed fires on each deploy hook run with what it read, changed and submitted. vendor.balance_low (at set_vendor_balance_alert's threshold, default $5) and vendor.balance_empty fire at most once a week while the balance stays low, not once per crossing, and reach client-scoped webhooks too; vendor.balance_empty fires again, once a day, with pausedScheduledRuns while scheduled rank runs wait for funds. clientId limits it to one client; null is every client. The secret is in the response once. Answers 'tell my system when a crawl finishes'. Free.
+   * Sends events to an https URL as they happen, signed: each POST carries Seolyticize-Signature: t=<unix>,v1=<hex HMAC-SHA256 of "<t>.<body>" with the secret>, plus Seolyticize-Event and Seolyticize-Delivery headers. The body is {id, type, createdAt, clientId, data, deliveryId}; get_webhook_schemas has the JSON Schema of each type. Retried with backoff (1 min to a day) until a 2xx; replay_webhooks sends missed ones again, redeliver_webhook one event by its id. Events: crawl.completed, gsc.synced, rank.moved, backlink.new, backlink.lost, issue.new_critical, ai.citation.gained, ai.citation.lost, competitor.page.new, budget.threshold, alert.fired, vendor.balance_low, vendor.balance_empty, deploy_hook.processed, processor.updated. deploy_hook.processed fires on each deploy hook run with what it read, changed and submitted. vendor.balance_low (at set_vendor_balance_alert's threshold, default $5) and vendor.balance_empty fire at most once a week while the balance stays low, not once per crossing, and reach client-scoped webhooks too; vendor.balance_empty fires again, once a day, with pausedScheduledRuns while scheduled rank runs wait for funds. processor.updated fires once per new version of /.well-known/processor.json (retention, sub-processors) with {version, updated, url}, to webhooks created before that version and to client-scoped ones too, so a privacy notice or consent manager can refresh. clientId limits it to one client; null is every client. The secret is in the response once. Answers 'tell my system when a crawl finishes'. Free.
    *
    * Requires `api:manage`. Agency-wide, changes state; not retried on 5xx.
    */
