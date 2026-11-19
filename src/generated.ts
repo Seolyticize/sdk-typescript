@@ -888,6 +888,8 @@ export interface ToolInputs {
     }[];
     /** True to drop pageviews on paths the site's robots.txt disallows for "*" (X-Seolyticize-Dropped: robots_disallowed); a custom event there is kept without its path. robots.txt is re-read every 10 minutes; while it is missing or cannot be read, nothing is dropped. On for a site set up from 2026-11-11, off for one before (get_next_steps suggests it as analytics_robots when robots.txt already keeps pages from crawlers). Left out, unchanged. */
     respectRobots?: boolean;
+    /** The ISO 4217 currency p.value is reported in (USD, EUR, JPY). An event whose p.currency differs is refused with 422 rejected_currency and counted in rejectedCurrency, never converted or summed. Left out, unchanged; a site with none takes the first p.currency it receives. Constraints: pattern ^[A-Za-z]{3}$. */
+    currency?: string;
   };
   /** Input for get_web_analytics_summary: Site traffic summary (first-party). */
   get_web_analytics_summary: {
@@ -1498,7 +1500,8 @@ export interface ToolInputs {
       | "competitor-new-keywords"
       | "web-mentions"
       | "link-velocity"
-      | "web-traffic-drop";
+      | "web-traffic-drop"
+      | "crawler-access-changed";
     /** Required, except for site-unreachable and new-critical-issues, where it is 1. Constraints: min 1, max 9007199254740991. */
     threshold?: number;
     /** Constraints: min 0, max 720. */
@@ -2146,15 +2149,55 @@ export interface ToolInputs {
       include?: "page-changes"[];
       uptimeMonitoredElsewhere?: boolean;
     };
-    /** Sibling platforms serving the client's pages. forumulate: link_content_platform for that host (its analytics hostname and its sitemap on the deploy hook); kept when the host is already linked. */
+    /** Sibling platforms serving the client's pages. forumulate: link_content_platform for that host (its analytics hostname and its sitemap on the deploy hook); kept when the host is already linked. host defaults to the manifest's domain. mounts: auto (with org) links every Forumulate mount on the host on each apply: partner paths, path owners and per-mount sitemaps; kept when nothing changed. With org and apiKey, also a signed Forumulate webhook calling the deploy hook on each publish, kept once the hook has Forumulate's secret. atlas, cookieMunch, watchtower, hermetica, referalli: link_sibling_platforms, kept when already linked to the same ids (watchtower.apiKey is needed only to link a new project). */
     platforms?: {
       forumulate?: {
         /** Constraints: min length 1, max length 253. */
-        host: string;
+        host?: string;
         /** Constraints: max length 2048, format uri. */
         sitemapUrl?: string;
+        /** Constraints: min length 1, max length 200. */
+        org?: string;
+        mounts?: "auto";
+        /** A Forumulate token with the write scope, from a CI secret (never committed): with org, publishes call the deploy hook, signed. Used once, never stored or echoed. Constraints: min length 8, max length 500. */
+        apiKey?: string;
       };
+      atlas?: {
+        /** The Atlas OIDC client id of the client's app. Constraints: min length 1, max length 200. */
+        clientId: string;
+      } | null;
+      cookieMunch?: {
+        /** The Cookie Munch organization id. Constraints: min length 1, max length 200. */
+        org: string;
+      } | null;
+      watchtower?: {
+        /** Constraints: pattern ^[A-Za-z0-9_-]{1,64}$. */
+        projectId: string;
+        /** A wta_ key with events:write, as link_watchtower takes; needed only to link a project not linked already. Constraints: min length 8, max length 512. */
+        apiKey?: string;
+      } | null;
+      hermetica?: {
+        /** The sender address verified in the client's Hermetica workspace. Constraints: max length 320, format email, pattern ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$. */
+        sender: string;
+      } | null;
+      referalli?: {
+        /** The Referalli programId. Constraints: min length 1, max length 200. */
+        programId: string;
+      } | null;
     };
+    /** set_environments: the site's other hosts (staging) with analytics, indexnow and crawl.auth; replaces the list, kept when it matches. Constraints: max items 10. */
+    environments?: Array<{
+      /** Constraints: pattern ^[a-z0-9-]+(\.[a-z0-9-]+)+$. */
+      host: string;
+      /** false: events from this host are dropped (202, X-Seolyticize-Dropped: environment). Defaults to true. */
+      analytics?: boolean;
+      /** false: pages on this host are never sent to IndexNow. Defaults to true. */
+      indexnow?: boolean;
+      /** Which set_crawl_auth credentials a crawl sends to this host: basic (the username and password), all (with headers and cookies) or none. Defaults to {"auth":"none"}. */
+      crawl?: {
+        auth: "none" | "basic" | "all";
+      };
+    }>;
     /** Constraints: max items 100. */
     facts?: Array<{
       /** Constraints: min length 2, max length 120. */
@@ -2319,10 +2362,16 @@ export interface ToolInputs {
     clientId: string;
     /** forumulate for a Forumulate site; other for any CMS or docs host. */
     kind: "forumulate" | "other";
-    /** The bare host the pages are served on: formflow.forumulate.com. Constraints: min length 1, max length 253. */
-    host: string;
+    /** The bare host the pages are served on: formflow.forumulate.com. Defaults to the client's domain. Constraints: min length 1, max length 253. */
+    host?: string;
     /** The host's sitemap; found from its robots.txt or /sitemap.xml when left out. Constraints: max length 2048, format uri. */
     sitemapUrl?: string;
+    /** forumulate: the Forumulate organization: its uuid (with mounts auto, only its mounts on the host are linked), or its slug with apiKey. Constraints: min length 1, max length 200. */
+    org?: string;
+    /** auto (kind forumulate): link every mount Forumulate serves on the host, from its public mount list. */
+    mounts?: "auto";
+    /** forumulate: a Forumulate token with the write scope, used once to create the signed webhook and never stored. Constraints: min length 8, max length 500. */
+    apiKey?: string;
   };
   /** Input for set_deploy_hook_sender_secret: Let a sender sign deploy hook calls with its own secret. */
   set_deploy_hook_sender_secret: {
@@ -2921,8 +2970,10 @@ export interface ToolInputs {
     clientId: string;
     /** Defaults to "web_analytics". */
     source?: "web_analytics" | "ga4";
-    /** Defaults to "landing_page". */
-    by?: "landing_page" | "source" | "referrer";
+    /** event_source: the last p.source the visit's events named — chatly for a visit that talked to the Chatly widget, atlas for an Atlas sign-up — or (none). Defaults to "landing_page". */
+    by?: "landing_page" | "source" | "referrer" | "event_source";
+    /** web_analytics only: count every visit in the range of one signed-in user (the uid the site sends, with consent) as one, so a sign-up in a later visit is credited to the first visit's landing page and source. Visits without a uid stay on their own. Defaults to false. */
+    acrossVisits?: boolean;
     /** Defaults to "all". */
     channel?: "all" | "search" | "ai";
     /** Constraints: max items 20. Defaults to []. */
@@ -6087,6 +6138,8 @@ export interface ToolInputs {
     match: string;
     /** Defaults to null. */
     valueMinor?: number | null;
+    /** An event goal only: the custom props (p) kept on this event, ["plan", "value"]. Any other prop on it is dropped before it is stored and the last one dropped shows as disallowedProp in get_web_analytics_setup. null keeps every prop. Defaults to null. */
+    allowedProps?: string[] | null;
     /** With "name": a goal of that name already defined the same way is returned as it is (created: false), and one defined differently is replaced, so a provisioning script can run this every time. */
     upsertBy?: "name";
     /** True to do nothing and get back exactly what the call would do: the rows it would write, the addresses it would submit, the emails it would send. Defaults to false. */
@@ -6174,6 +6227,15 @@ export interface ToolInputs {
     days?: number;
     /** Constraints: min 1, max 100. Defaults to 20. */
     limit?: number;
+    /** Count every visit of one signed-in user (the uid the site sends to /api/collect, with consent) as one journey, steps up to 30 days apart, credited to its first landing page. Visits without a uid stay on their own. Defaults to false. */
+    acrossVisits?: boolean;
+  };
+  /** Input for forget_user: Erase one user's analytics. */
+  forget_user: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** The uid exactly as the site sent it to /api/collect. Constraints: min length 16, max length 128. */
+    uid: string;
   };
   /** Input for get_ai_agent_visits: AI assistants reading the site. */
   get_ai_agent_visits: {
@@ -6701,6 +6763,55 @@ export interface ToolInputs {
     day?: number | string | null;
     hour?: number | null;
   };
+  /** Input for link_sibling_platforms: Link the client's Atlas, Cookie Munch, Watchtower, Hermetica and Referalli. */
+  link_sibling_platforms: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    atlas?: {
+      /** The Atlas OIDC client id of the client's app. Constraints: min length 1, max length 200. */
+      clientId: string;
+    } | null;
+    cookieMunch?: {
+      /** The Cookie Munch organization id. Constraints: min length 1, max length 200. */
+      org: string;
+    } | null;
+    watchtower?: {
+      /** Constraints: pattern ^[A-Za-z0-9_-]{1,64}$. */
+      projectId: string;
+      /** A wta_ key with events:write, as link_watchtower takes; needed only to link a project not linked already. Constraints: min length 8, max length 512. */
+      apiKey?: string;
+    } | null;
+    hermetica?: {
+      /** The sender address verified in the client's Hermetica workspace. Constraints: max length 320, format email, pattern ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$. */
+      sender: string;
+    } | null;
+    referalli?: {
+      /** The Referalli programId. Constraints: min length 1, max length 200. */
+      programId: string;
+    } | null;
+    /** True to do nothing and get back exactly what the call would do: the rows it would write, the addresses it would submit, the emails it would send. Defaults to false. */
+    dryRun?: boolean;
+  };
+  /** Input for set_environments: Name the site's other hosts, such as staging. */
+  set_environments: {
+    /** Constraints: min length 1. */
+    clientId: string;
+    /** Constraints: max items 10. */
+    environments: Array<{
+      /** Constraints: pattern ^[a-z0-9-]+(\.[a-z0-9-]+)+$. */
+      host: string;
+      /** false: events from this host are dropped (202, X-Seolyticize-Dropped: environment). Defaults to true. */
+      analytics?: boolean;
+      /** false: pages on this host are never sent to IndexNow. Defaults to true. */
+      indexnow?: boolean;
+      /** Which set_crawl_auth credentials a crawl sends to this host: basic (the username and password), all (with headers and cookies) or none. Defaults to {"auth":"none"}. */
+      crawl?: {
+        auth: "none" | "basic" | "all";
+      };
+    }>;
+    /** True to do nothing and get back exactly what the call would do: the rows it would write, the addresses it would submit, the emails it would send. Defaults to false. */
+    dryRun?: boolean;
+  };
   /** Input for accept_issue: Accept an audit issue as intentional. */
   accept_issue: {
     /** Constraints: min length 1. */
@@ -6744,6 +6855,8 @@ export interface ToolInputs {
       owner: string;
       /** Defaults to null. */
       contact?: string | null;
+      /** Percent of a crawl's page budget this owner's pages may take; null for no cap; left out keeps what is saved. */
+      crawlShare?: number | null;
     }>;
     /** replace: owners is the whole list. merge: owners are added or updated, remove is dropped, the rest kept. Defaults to "replace". */
     mode?: "replace" | "merge";
@@ -6830,7 +6943,7 @@ export interface ToolInputs {
     clientId?: string | null;
     /** Constraints: max length 2000, format uri. */
     url: string;
-    /** Constraints: min items 1, max items 15. */
+    /** Constraints: min items 1, max items 18. */
     events: Array<
       | "crawl.completed"
       | "gsc.synced"
@@ -6847,7 +6960,12 @@ export interface ToolInputs {
       | "vendor.balance_empty"
       | "deploy_hook.processed"
       | "processor.updated"
+      | "audit.changed"
+      | "verify.item_changed"
+      | "analytics.first_event"
     >;
+    /** A path owner: only events whose byOwner names it. Defaults to null. */
+    owner?: string | null;
   };
   /** Input for list_webhooks: List webhooks. */
   list_webhooks: Record<string, never>;
@@ -6898,6 +7016,9 @@ export interface ToolInputs {
       | "vendor.balance_empty"
       | "deploy_hook.processed"
       | "processor.updated"
+      | "audit.changed"
+      | "verify.item_changed"
+      | "analytics.first_event"
       | null;
   };
   /** Input for send_test_event: Send a test event. */
@@ -7999,6 +8120,7 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
   delete_funnel: { permission: "data:write", clientScoped: true, readOnly: false },
   get_goal_report: { permission: "data:read", clientScoped: true, readOnly: true },
   get_funnel_report: { permission: "data:read", clientScoped: true, readOnly: true },
+  forget_user: { permission: "data:write", clientScoped: true, readOnly: false },
   get_ai_agent_visits: { permission: "data:read", clientScoped: true, readOnly: true },
   connect_revenue_source: {
     permission: "client:manage",
@@ -8076,6 +8198,12 @@ export const toolMeta: Record<ToolName, ToolMeta> = {
     clientScoped: true,
     readOnly: false,
   },
+  link_sibling_platforms: {
+    permission: "client:manage",
+    clientScoped: true,
+    readOnly: false,
+  },
+  set_environments: { permission: "client:manage", clientScoped: true, readOnly: false },
   accept_issue: { permission: "data:write", clientScoped: true, readOnly: false },
   list_accepted_issues: { permission: "data:read", clientScoped: true, readOnly: true },
   unaccept_issue: { permission: "data:write", clientScoped: true, readOnly: false },
@@ -9674,7 +9802,7 @@ export interface ToolMethods {
   /**
    * Create an alert rule.
    *
-   * Raises an alert when a client's rankings, traffic, issues or backlinks cross a threshold, or the site goes down, and delivers it by channel. Threshold by kind: rank-drop positions fallen; traffic-drop percent lost; new-critical-issues and backlinks-lost a count; serp-features features lost (or won); competitor-new-pages new pages one tracked competitor's sitemap gained; page-changes own pages whose title, meta description, H1 or canonical changed, went noindex or 404 between the last two audits; ai-mention-drop percentage points the client's AI mention or citation rate fell from the previous check; competitor-new-keywords tracked keywords one competitor started ranking for; web-mentions new pages our crawl found naming the brand; link-velocity referring domains gained or lost in one day, far above that domain's own baseline, for the client or a tracked competitor; web-traffic-drop percent of visits lost in the site's own web analytics, the last 24 hours against the same hours of the same weekday over the previous four weeks, silent below 20 visits a day on average (a broken tag after a deploy pages within the hour). The watch kinds look back to their last firing (a week at most) and stay silent until there is something to compare. Channels: slack (webhookUrl, Slack's format; the default), webhook (webhookUrl, plain JSON), discord (webhookUrl, the channel's Discord webhook as Discord shows it), email (emailRecipients, up to ten) telegram (telegramChatId, posted by botToken — the customer's own bot, stored sealed — or else the agency's bot from Settings), watchtower (apiKey, a service-account wta_ key with events:write, and watchtowerProjectId: posts an event to that Watchtower project with POST /v1/projects/{prj}/events, alert_type error, warning or info by severity, source seolyticize, aggregation_key the rule id, tags kind:<kind> and client:<clientId>, and the detail and links in its text) or hermetica (apiKey, hermeticaFrom and emailRecipients: the alert email sent through the client's own Hermetica account with POST /v1/transactional/send). The apiKey is stored sealed and never returned. Webhooks must be https and public. With no channel and no destination, the alert goes to the client's linked Watchtower project (link_watchtower), else the agency owner's email, and deliveryNote says so; a deployment with no email provider refuses it as no_delivery_target instead; a channel named without its field is refused as no_delivery_target. paidSource (competitor-new-keywords and web-mentions only; off by default; needs spend permission) also buys the signal from DataForSEO on every sweep: for competitor-new-keywords, Labs ranked keywords each tracker competitor (up to 5) newly ranks for at the tracker's market, not only tracked keywords; for web-mentions, pages DataForSEO's content index first saw naming the brand, off the client's own domains. The sweep is hourly but a purchase is reused from the archive while fresh, so it buys at most once a week per competitor (once a day for mentions); it is capped by the client's monthly budget, and a failed or over-budget read falls back to the free signal. Quote it first with estimate_cost. Answers 'tell me when rankings drop'.
+   * Raises an alert when a client's rankings, traffic, issues or backlinks cross a threshold, or the site goes down, and delivers it by channel. Threshold by kind: rank-drop positions fallen; traffic-drop percent lost; new-critical-issues and backlinks-lost a count; serp-features features lost (or won); competitor-new-pages new pages one tracked competitor's sitemap gained; page-changes own pages whose title, meta description, H1 or canonical changed, went noindex or 404 between the last two audits; ai-mention-drop percentage points the client's AI mention or citation rate fell from the previous check; competitor-new-keywords tracked keywords one competitor started ranking for; web-mentions new pages our crawl found naming the brand; link-velocity referring domains gained or lost in one day, far above that domain's own baseline, for the client or a tracked competitor; web-traffic-drop percent of visits lost in the site's own web analytics, the last 24 hours against the same hours of the same weekday over the previous four weeks, for the site and for each of its five busiest hosts and ten busiest pages against their own baselines, silent below 20 visits a day on average (a broken tag after a deploy pages within the hour, and one host or page losing its visits while the total holds is named); crawler-access-changed crawlers and assistants (GPTBot, Googlebot, ClaudeBot and the rest get_agent_access_matrix asks as) whose answer for the home page changed since last week (status, title, H1, canonical, or words or bytes under half) and no longer matches what a browser gets, checked weekly, the first week a baseline (an app shell served to GPTBot, a CDN rule blocking an assistant). The watch kinds look back to their last firing (a week at most) and stay silent until there is something to compare. Channels: slack (webhookUrl, Slack's format; the default), webhook (webhookUrl, plain JSON), discord (webhookUrl, the channel's Discord webhook as Discord shows it), email (emailRecipients, up to ten) telegram (telegramChatId, posted by botToken — the customer's own bot, stored sealed — or else the agency's bot from Settings), watchtower (apiKey, a service-account wta_ key with events:write, and watchtowerProjectId: posts an event to that Watchtower project with POST /v1/projects/{prj}/events, alert_type error, warning or info by severity, source seolyticize, aggregation_key the rule id, tags kind:<kind> and client:<clientId>, and the detail and links in its text) or hermetica (apiKey, hermeticaFrom and emailRecipients: the alert email sent through the client's own Hermetica account with POST /v1/transactional/send). The apiKey is stored sealed and never returned. Webhooks must be https and public. With no channel and no destination, the alert goes to the client's linked Watchtower project (link_watchtower), else the agency owner's email, and deliveryNote says so; a deployment with no email provider sends it through the client's own Hermetica when the client has a hermetica rule, and otherwise refuses it as no_delivery_target; a channel named without its field is refused as no_delivery_target. paidSource (competitor-new-keywords and web-mentions only; off by default; needs spend permission) also buys the signal from DataForSEO on every sweep: for competitor-new-keywords, Labs ranked keywords each tracker competitor (up to 5) newly ranks for at the tracker's market, not only tracked keywords; for web-mentions, pages DataForSEO's content index first saw naming the brand, off the client's own domains. The sweep is hourly but a purchase is reused from the archive while fresh, so it buys at most once a week per competitor (once a day for mentions); it is capped by the client's monthly budget, and a failed or over-budget read falls back to the free signal. Quote it first with estimate_cost. Answers 'tell me when rankings drop'.
    *
    * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -10358,7 +10486,7 @@ export interface ToolMethods {
   /**
    * Bring a client to what its repo declares.
    *
-   * Answers 'provision our product from its manifest' in one call that is safe to run on every deploy. Takes what a repository declares about its site (domain, framework, verification, tracker cadence, budget and its alert share, domain sweep, deploy hook, analytics paths and partners, crawl settings, default alerts and where they go, brief and brand terms, facts, goals, funnels, sibling platforms such as a Forumulate host) and brings the client to it through the existing tools, each with its own permission and checks. Each part is compared with what is there first: a step is kept when it would write nothing, ran when it changed something, would_run on a dry run. patch is an RFC 6902 JSON Patch of what the run changed, or on a dry run would change, against the live config, each path starting with its section (/crawl/render, /budget/monthlyUsd, /goals/Signup); an empty patch on a dry run means the live config matches the manifest, so CI can fail the build on drift. Fields the manifest leaves out are left as they are. files (the IndexNow key and Google verification file, which are public) come back on every real run. env lists each environment variable to set: build (read at build time), runtime and secrets, with public ids as values and secrets only as a placeholder naming the tool that issues them. A new deploy hook's secret is in its step's result only, once. A deployer key may run it with dryRun only. Free.
+   * Answers 'provision our product from its manifest' in one call that is safe to run on every deploy. Takes what a repository declares about its site (domain, framework, verification, tracker cadence, budget and its alert share, domain sweep, deploy hook, analytics paths and partners, crawl settings, default alerts and where they go, brief and brand terms, facts, goals, funnels, sibling platforms (a Forumulate host, and with its org and a token its signed publish webhook; Atlas, Cookie Munch, Watchtower, Hermetica and Referalli by id), environments such as staging) and brings the client to it through the existing tools, each with its own permission and checks. Each part is compared with what is there first: a step is kept when it would write nothing, ran when it changed something, would_run on a dry run. patch is an RFC 6902 JSON Patch of what the run changed, or on a dry run would change, against the live config, each path starting with its section (/crawl/render, /budget/monthlyUsd, /goals/Signup); an empty patch on a dry run means the live config matches the manifest, so CI can fail the build on drift. Fields the manifest leaves out are left as they are. files (the IndexNow key and Google verification file, which are public) come back on every real run. env lists each environment variable to set: build (read at build time), runtime and secrets, with public ids as values and secrets only as a placeholder naming the tool that issues them. A new deploy hook's secret is in its step's result only, once. A deployer key may run it with dryRun only. Free.
    *
    * Requires `deploy:run`. Agency-wide, changes state; not retried on 5xx.
    */
@@ -10382,7 +10510,7 @@ export interface ToolMethods {
   /**
    * Verify a deployed site and finish onboarding.
    *
-   * Answers 'I deployed it, is everything connected'. After the onboard_site manifest is live, checks and completes everything in one call: the IndexNow key file, Google ownership (and then adds and connects the Search Console property, with its sixteen months of history), whether analytics has received its first event, that robots.txt and the sitemap answer, and starts the first crawl. Returns a checklist where every item not done carries the exact fix and the next call. Safe to call again; a deployer key may call it. Free.
+   * Answers 'I deployed it, is everything connected'. After the onboard_site manifest is live, checks and completes everything in one call: the IndexNow key file, Google ownership (and then adds and connects the Search Console property, with its sixteen months of history), whether analytics has received its first event, that robots.txt and the sitemap answer, and starts the first crawl. A sitemap gets 20 s, and after a timeout one more try of 60 s; one slower than 10 s, or that never answers, is code slow_sitemap (optional when it answered, todo when not), with observed {url, elapsedMs, timeoutMs, retried}. Returns a checklist where every item not done carries the exact fix and the next call. Safe to call again; a deployer key may call it. Free.
    *
    * Requires `deploy:run`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -10526,7 +10654,7 @@ export interface ToolMethods {
   /**
    * Link a content platform's host.
    *
-   * Answers 'our help, blog or legal pages live on another host (Forumulate, a docs platform)'. Links a host serving the client's pages to the client: adds it to the cookieless analytics hostnames (a visit from a host not listed is refused), and adds its sitemap (sitemapUrl, else each Sitemap: line of the host's robots.txt, else /sitemap.xml, kept only when it answers as a sitemap) to the deploy hook's sitemaps, keeping the hook's secret and baseline, so each call reads its new and changed pages. They are not sent to IndexNow, which takes a page only under a key file on the page's own host, which only the platform can serve; the hook's answer counts them under notSentToIndexNow with that reason (Forumulate pings IndexNow itself for any of its spaces, docs and help included, once publishPings.indexNow is on there). Search engines still read the host's sitemap. get_site_status lists it under coveredHosts and get_next_steps under content_platform. The site crawl does not follow it: a crawl stays on the client's own domain. On the Forumulate side (from its public guides): set the site key from get_web_analytics_setup as the seolyticize field of PUT /orgs/{orgId}/analytics-tags (or a site's or space's), which sends pageviews with no script, gated as first-party measurement by the consent settings (firstPartyAnalytics); robots.txt names the host's sitemap; and publishes call the deploy hook one of three ways, as get_deploy_hook's howToCall.forumulate spells out: (1, recommended) an ordinary signed webhook, POST /orgs/{orgId}/webhooks {url: the hook's url, events: [page.live, publish.completed]}, whose one-time signing secret goes to set_deploy_hook_sender_secret, so no secret is in any URL; (2) Settings → Analytics, PUT /orgs/{orgId}/seolyticize/deploy-hook {url: webhookUrl}, the same webhook with a secret it never answers; (3) a webhook of kind deploy_hook (a manifest's webhooks entry {kind: deploy_hook, url: webhookUrl, events: [page.published]}; page.live and topic.published also allowed, publish.completed not), an unsigned empty POST with ?source=forumulate&ref=<event>, which get_deploy_hook's lastResult shows. (2) and (3) carry no signature Seolyticize can check, so they need the webhookUrl holding the secret. Safe to repeat. Free.
+   * Answers 'our help, blog or legal pages live on another host (Forumulate, a docs platform)'. Links a host serving the client's pages to the client: adds it to the cookieless analytics hostnames (a visit from a host not listed is refused), and adds its sitemap (sitemapUrl, else each Sitemap: line of the host's robots.txt, else /sitemap.xml, kept only when it answers as a sitemap) to the deploy hook's sitemaps, keeping the hook's secret and baseline, so each call reads its new and changed pages. They are not sent to IndexNow, which takes a page only under a key file on the page's own host, which only the platform can serve; the hook's answer counts them under notSentToIndexNow with that reason (Forumulate pings IndexNow itself for any of its spaces, docs and help included, once publishPings.indexNow is on there). Search engines still read the host's sitemap. get_site_status lists it under coveredHosts and get_next_steps under content_platform. Discovery without sitemapUrl is bounded: robots.txt, then at most 10 sitemaps (only those under the partner's mounts when it has any; an index's children are not walked), 6 s each and 12 s in all, so the call answers well inside 25 s; like any call still running at 25 s it would answer 202 {jobId, idempotencyKey}, collected by POSTing the same body with that Idempotency-Key. mounts: auto (kind forumulate) reads the host's mounts from Forumulate's public GET /api/public/domains/resolve?host= (at most 20, each resolved once with &path=, 6 s each, 12 s in all; with org, only that Forumulate org's; a mount Forumulate redirects is skipped), then sets in one place: the forumulate partner paths (/docs and /docs/* per mount), a path owner Forumulate for each mount nobody owns yet, and each mount's <mount>/sitemap.xml that answers on the deploy hook; the answer's mounts lists them, what was skipped and why, and changed. host defaults to the client's domain. The site crawl does not follow it: a crawl stays on the client's own domain. On the Forumulate side (from its public guides): set the site key from get_web_analytics_setup as the seolyticize field of PUT /orgs/{orgId}/analytics-tags (or a site's or space's), which sends pageviews with no script, gated as first-party measurement by the consent settings (firstPartyAnalytics); robots.txt names the host's sitemap; and publishes call the deploy hook one of three ways, as get_deploy_hook's howToCall.forumulate spells out: (1, recommended) an ordinary signed webhook, POST /orgs/{orgId}/webhooks {url: the hook's url, events: [page.live, publish.completed]}, whose one-time signing secret goes to set_deploy_hook_sender_secret, so no secret is in any URL; (2) Settings → Analytics, PUT /orgs/{orgId}/seolyticize/deploy-hook {url: webhookUrl}, the same webhook with a secret it never answers; (3) a webhook of kind deploy_hook (a manifest's webhooks entry {kind: deploy_hook, url: webhookUrl, events: [page.published]}; page.live and topic.published also allowed, publish.completed not), an unsigned empty POST with ?source=forumulate&ref=<event>, which get_deploy_hook's lastResult shows. (2) and (3) carry no signature Seolyticize can check, so they need the webhookUrl holding the secret. With org and apiKey (a Forumulate token with the write scope, used for these calls only and never stored) and a deploy hook in place, (1) is done here: the webhook is created with externalRef seolyticize-deploy-<hookId> (so a repeat finds it), its secret stored as the hook's sender secret (rotated when Forumulate does not show it again and none is stored), and publishes reports connected, kept, no_deploy_hook or failed with Forumulate's error. Safe to repeat. Free.
    *
    * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -12746,7 +12874,7 @@ export interface ToolMethods {
   /**
    * Add the site to Bing Webmaster Tools.
    *
-   * Adds the client's site to the agency's Bing Webmaster Tools account (the one the saved key belongs to), if it is not there yet, and returns Bing's three proofs: file (/BingSiteAuth.xml, served exactly as given), meta (the msvalidate.01 tag) and dns (a CNAME to verify.bing.com). Answers 'add this site to Bing' and 'how do we verify the site in Bing'. Deploy one proof, then call verify_bing_site. Safe to repeat: an added site is returned as it is. added is true only when this call added the site; existed is true when it was already in the account (onboard_site adds it when Bing is connected). Free.
+   * Adds the client's site to the agency's Bing Webmaster Tools account (the one the saved key belongs to), if it is not there yet, and returns Bing's three proofs: file (/BingSiteAuth.xml, served exactly as given), meta (the msvalidate.01 tag) and dns (a CNAME to verify.bing.com). Answers 'add this site to Bing' and 'how do we verify the site in Bing'. Deploy one proof, then call verify_bing_site. Safe to repeat: an added site is returned as it is. added is true only when this call added the site; existed is true when it was already in the account, and addedBy names the call that added it (onboard_site adds it when Bing is connected; null when it was added outside Seolyticize). Free.
    *
    * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -13586,7 +13714,7 @@ export interface ToolMethods {
   /**
    * The crawl by URL template and by owner.
    *
-   * One crawl read by URL template (ids and numbered slugs replaced by *, siblings folded: /shop/i/*) and by path owner (set_path_owners): per template its pages and examples, index coverage (indexable against not), owners, its most common issues, merchant listing eligibility (pages marking up a Product, and those free of the merchant-listing and rich-result-product findings, with what blocks the rest), pages that answered 200 in the crawl before and 404 now (sold or expired items: answer 410, or keep the page with availability SoldOut), and performance: response time p50, p75 and max as the crawler measured it, pages over 600 ms and over 3 s, and pages sending neither ETag nor Last-Modified. byOwner totals pages, issues and performance per owner, null being the client's own pages, so a partner's numbers can be sent to the partner. Pairs with set_crawl_settings sample.perTemplate, which crawls N pages of each template. Field data (Chrome UX Report) is per URL in get_vitals_history. Answers 'which template is broken', 'which listings sold' and 'how fast are Forumulate's pages'. Free.
+   * One crawl read by URL template (ids and numbered slugs replaced by *, siblings folded: /shop/i/*) and by path owner (set_path_owners): per template its pages and examples, index coverage (indexable against not), owners, its most common issues, merchant listing eligibility (pages marking up a Product, and those free of the merchant-listing and rich-result-product findings, with what blocks the rest), pages that answered 200 in the crawl before and 404 now (sold or expired items: answer 410, or keep the page with availability SoldOut), and performance: response time p50, p75 and max as the crawler measured it, pages over 600 ms and over 3 s, and pages sending neither ETag nor Last-Modified. byOwner totals pages, issues and performance per owner, null being the client's own pages, so a partner's numbers can be sent to the partner. Pairs with set_crawl_settings sample.perTemplate, which crawls N pages of each template. fieldData, on each template and owner, is Chrome UX Report field data (phone) over the pages that have a URL-level reading: how many, how many pass Core Web Vitals, and the median of their LCP, INP and CLS p75s; null when none has one (an audit's performance sample and page_vitals record them; get_vitals_history has the origin's trend). Answers 'which template is broken', 'which listings sold' and 'how fast are Forumulate's pages'. Free.
    *
    * Requires `data:read`. Client-scoped, read-only.
    */
@@ -13670,7 +13798,7 @@ export interface ToolMethods {
   /**
    * Key for server-side collection.
    *
-   * Issues the secret key a server-side collector (@seolyticize/next/server, the Python and PHP collectors, or a POST to /api/collect with Authorization: Bearer) reports with, so it may send each visitor's own address and user agent (body fields ip and ua; howToUse lists the rest) — which is what lets it count people, and the AI assistants (ChatGPT-User, Claude-User, Perplexity-User) that never run the browser tag. Shown once; issuing another revokes the last, at once or, with graceHours, once previousKeyExpiresAt passes, so a rotation never drops events while the new key rolls out. Answers 'track visits from our server', 'rotate the collect key' and 'count AI agents reading our pages'. Free.
+   * Issues the secret key a server-side collector (@seolyticize/next/server, the Python and PHP collectors, or a POST to /api/collect with Authorization: Bearer) reports with, so it may send each visitor's own address and user agent (body fields ip and ua; howToUse lists the rest) — which is what lets it count people, and the AI assistants (ChatGPT-User, Claude-User, Perplexity-User) that never run the browser tag. Shown once; issuing another revokes the last, at once or, with graceHours, once previousKeyExpiresAt passes, so a rotation never drops events while the new key rolls out. Also returns proxy: the X-Seolyticize-Proxy header value a first-party proxy (a.js with data-api="/s/e" on the site's own domain) sends so its forwarded X-Forwarded-For and X-Seolyticize-Country are believed; it rotates with the key. Answers 'track visits from our server', 'rotate the collect key', 'proxy the tag through our own domain' and 'count AI agents reading our pages'. Free.
    *
    * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -13766,7 +13894,7 @@ export interface ToolMethods {
   /**
    * Define a funnel.
    *
-   * Defines a funnel: 2 to 8 steps (a page reached or an event sent) a visit should pass through in order — landing page, product, cart, thank-you. Measured within one visit, because the cookieless visitor id resets daily. Pageview and event steps mix in any order; each step must happen after the one before it in the visit. Labels are optional and need not be unique (the report names a step by its label, else its match). Answers 'how many who see pricing go on to sign up'. Free.
+   * Defines a funnel: 2 to 8 steps (a page reached or an event sent) a visit should pass through in order — landing page, product, cart, thank-you. Measured within one visit, because the cookieless visitor id resets daily; get_funnel_report with acrossVisits measures it across a signed-in user's visits instead, where the site sends uid. Pageview and event steps mix in any order; each step must happen after the one before it in the visit. Labels are optional and need not be unique (the report names a step by its label, else its match). Answers 'how many who see pricing go on to sign up'. Free.
    *
    * Requires `data:write`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -13820,6 +13948,18 @@ export interface ToolMethods {
    */
   get_funnel_report<T = unknown>(
     input: ToolInputs["get_funnel_report"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Erase one user's analytics.
+   *
+   * Deletes every analytics event carrying this uid (the site's hashed user id sent to /api/collect), and the rest of each visit that carried it, pages read before signing in included. Answers a data subject's erasure request. Not reversible; removal completes within minutes. Safe to repeat: a uid with nothing left answers removed 0. Free.
+   *
+   * Requires `data:write`. Client-scoped, changes state; not retried on 5xx.
+   */
+  forget_user<T = unknown>(
+    input: ToolInputs["forget_user"],
     options?: CallOptions,
   ): Promise<T>;
 
@@ -14186,7 +14326,7 @@ export interface ToolMethods {
   /**
    * Add the default alerts.
    *
-   * Gives a client the four alerts every new client now starts with: the site goes down (site-unreachable), non-branded Search Console clicks fall 30% or more week on week (traffic-drop 30), a crawl finds critical issues (new-critical-issues 1), and a tracked keyword drops 5 or more places (rank-drop 5). Each goes to the client's linked Watchtower project (link_watchtower), else the agency owner's email, until changed with update_alert_rule. On a deployment with no email provider, rules that would go to the owner's email are made paused (pausedUntilDelivery) with next naming the call that gives them a destination; passing a destination later moves and resumes them. A kind the client already has a rule for is kept as it is, so it is safe to repeat. channel with webhookUrl (slack, webhook, discord), emailRecipients (email) or telegramChatId (telegram) sends them there instead, and moves default rules still going only to the owner's email (moved). uptimeMonitoredElsewhere: true leaves site-unreachable out (and pauses an existing one) when another monitor owns uptime. include: ["page-changes"] adds a fifth: own pages whose title, meta description, H1 or canonical changed, went noindex or 404. Pass clientId for one client, or allClients: true for every live client the key may manage. Answers 'set up the usual alerts'. Free.
+   * Gives a client the four alerts every new client now starts with: the site goes down (site-unreachable), non-branded Search Console clicks fall 30% or more week on week (traffic-drop 30), a crawl finds critical issues (new-critical-issues 1), and a tracked keyword drops 5 or more places (rank-drop 5). Each goes to the client's linked Watchtower project (link_watchtower), else the agency owner's email, until changed with update_alert_rule. On a deployment with no email provider, rules that would go to the owner's email go through the client's own Hermetica instead when it has a hermetica rule (its key, sender and recipients), and are otherwise made paused (pausedUntilDelivery) with next naming the call that gives them a destination; passing a destination later moves and resumes them. A kind the client already has a rule for is kept as it is, so it is safe to repeat. channel with webhookUrl (slack, webhook, discord), emailRecipients (email) or telegramChatId (telegram) sends them there instead, and moves default rules still going only to the owner's email (moved). uptimeMonitoredElsewhere: true leaves site-unreachable out (and pauses an existing one) when another monitor owns uptime. include: ["page-changes"] adds a fifth: own pages whose title, meta description, H1 or canonical changed, went noindex or 404. Pass clientId for one client, or allClients: true for every live client the key may manage. Answers 'set up the usual alerts'. Free.
    *
    * Requires `client:manage`. Agency-wide, changes state; not retried on 5xx.
    */
@@ -14216,6 +14356,30 @@ export interface ToolMethods {
    */
   set_crawl_schedule<T = unknown>(
     input: ToolInputs["set_crawl_schedule"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Link the client's Atlas, Cookie Munch, Watchtower, Hermetica and Referalli.
+   *
+   * Records in one call which sibling products the client's site runs on: atlas {clientId} (its Atlas OIDC client id), cookieMunch {org}, watchtower {projectId, apiKey} (through link_watchtower: alerts go there and it owns uptime; apiKey only when the project is not linked already), hermetica {sender} (the verified sender address) and referalli {programId}. A product left out is kept, null unlinks it. Ids only: no other secret is taken or stored. verify_site lists what is linked. dryRun: true writes nothing and answers the same. Answers 'connect this client to our other products'. Free.
+   *
+   * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
+   */
+  link_sibling_platforms<T = unknown>(
+    input: ToolInputs["link_sibling_platforms"],
+    options?: CallOptions,
+  ): Promise<T>;
+
+  /**
+   * Name the site's other hosts, such as staging.
+   *
+   * Replaces the client's environments: hosts of the same site other than production, such as {host: "staging.example.com", analytics: false, crawl: {auth: "basic"}, indexnow: false}. analytics: false drops events from that host (answered 202 with X-Seolyticize-Dropped: environment, not refused), even when it is among the analytics hostnames; a collecting one (true, the default) must also be in set_up_web_analytics hostnames. indexnow: false keeps its pages out of every IndexNow submission (refused with the reason). crawl.auth names which set_crawl_auth credentials a crawl sends to that host (basic, all, or none, the default); once any environment names credentials, only environment hosts get them, so production never sees a staging password. Credentials never leave the client's domain. An empty list clears them. dryRun: true writes nothing and answers the same. Answers 'staging should not count in analytics'. Free.
+   *
+   * Requires `client:manage`. Client-scoped, changes state; not retried on 5xx.
+   */
+  set_environments<T = unknown>(
+    input: ToolInputs["set_environments"],
     options?: CallOptions,
   ): Promise<T>;
 
@@ -14258,7 +14422,7 @@ export interface ToolMethods {
   /**
    * Say who owns which part of the site.
    *
-   * For a site built on several platforms, names the owner (and a contact) of each path prefix: /docs, /blog and /community on one vendor, the shop on another. mode replace (the default) makes owners the client's whole list, and an empty list clears it; mode merge adds or updates the prefixes given, drops those in remove, and keeps every other. The answer lists the resulting owners and the changes: added, updated (with what it was), removed and kept. dryRun: true saves nothing and answers the same, to check a change first. A URL belongs to the longest prefix it falls under, on segment boundaries (/docs covers /docs/x, not /docsearch); / is the catch-all. Then get_audit_summary and list_issue_pages split issues by owner, create_tasks_from_audit puts the owner on each task, and the digest groups its fixes by owner. Answers 'the docs team owns /docs, send those fixes to them'. Free.
+   * For a site built on several platforms, names the owner (and a contact) of each path prefix: /docs, /blog and /community on one vendor, the shop on another. mode replace (the default) makes owners the client's whole list, and an empty list clears it; mode merge adds or updates the prefixes given, drops those in remove, and keeps every other. The answer lists the resulting owners and the changes: added, updated (with what it was), removed and kept. dryRun: true saves nothing and answers the same, to check a change first. A URL belongs to the longest prefix it falls under, on segment boundaries (/docs covers /docs/x, not /docsearch); / is the catch-all. crawlShare caps the owner's share of a crawl's page budget (maxPages): of the pages a crawl seeds from the sitemap, at most that percent go to the owner's paths (pages reached later by links are not counted against it). Route the owner's issues with create_webhook {owner}, which receives only events whose byOwner names it (issue.new_critical), or read list_issue_pages, which carries each page's owner. Then get_audit_summary and list_issue_pages split issues by owner, create_tasks_from_audit puts the owner on each task, and the digest groups its fixes by owner. Answers 'the docs team owns /docs, send those fixes to them'. Free.
    *
    * Requires `data:write`. Client-scoped, changes state; not retried on 5xx.
    */
@@ -14399,7 +14563,7 @@ export interface ToolMethods {
   /**
    * Subscribe a URL to events.
    *
-   * Sends events to an https URL as they happen, signed: each POST carries Seolyticize-Signature: t=<unix>,v1=<hex HMAC-SHA256 of "<t>.<body>" with the secret>, plus Seolyticize-Event and Seolyticize-Delivery headers. The body is {id, type, createdAt, clientId, data, deliveryId}; get_webhook_schemas has the JSON Schema of each type. Retried with backoff (1 min to a day) until a 2xx; replay_webhooks sends missed ones again, redeliver_webhook one event by its id. Events: crawl.completed, gsc.synced, rank.moved, backlink.new, backlink.lost, issue.new_critical, ai.citation.gained, ai.citation.lost, competitor.page.new, budget.threshold, alert.fired, vendor.balance_low, vendor.balance_empty, deploy_hook.processed, processor.updated. deploy_hook.processed fires on each deploy hook run with what it read, changed and submitted. vendor.balance_low (at set_vendor_balance_alert's threshold, default $5) and vendor.balance_empty fire at most once a week while the balance stays low, not once per crossing, and reach client-scoped webhooks too; vendor.balance_empty fires again, once a day, with pausedScheduledRuns while scheduled rank runs wait for funds. processor.updated fires once per new version of /.well-known/processor.json (retention, sub-processors) with {version, updated, url}, to webhooks created before that version and to client-scoped ones too, so a privacy notice or consent manager can refresh. clientId limits it to one client; null is every client. The secret is in the response once. Answers 'tell my system when a crawl finishes'. Free.
+   * Sends events to an https URL as they happen, signed: each POST carries Seolyticize-Signature: t=<unix>,v1=<hex HMAC-SHA256 of "<t>.<body>" with the secret>, plus Seolyticize-Event and Seolyticize-Delivery headers. The body is {id, type, createdAt, clientId, data, deliveryId}; get_webhook_schemas has the JSON Schema of each type. Retried with backoff (1 min to a day) until a 2xx; replay_webhooks sends missed ones again, redeliver_webhook one event by its id. Events: crawl.completed, gsc.synced, rank.moved, backlink.new, backlink.lost, issue.new_critical, ai.citation.gained, ai.citation.lost, competitor.page.new, budget.threshold, alert.fired, vendor.balance_low, vendor.balance_empty, deploy_hook.processed, processor.updated, audit.changed, verify.item_changed, analytics.first_event. deploy_hook.processed fires on each deploy hook run with what it read, changed and submitted. vendor.balance_low (at set_vendor_balance_alert's threshold, default $5) and vendor.balance_empty fire at most once a week while the balance stays low, not once per crossing, and reach client-scoped webhooks too; vendor.balance_empty fires again, once a day, with pausedScheduledRuns while scheduled rank runs wait for funds. processor.updated fires once per new version of /.well-known/processor.json (retention, sub-processors) with {version, updated, url}, to webhooks created before that version and to client-scoped ones too, so a privacy notice or consent manager can refresh. audit.changed fires on every write recorded on the audit trail (list_audit_events), with {invocationId, tool, actor, surface, changes}; verify.item_changed when a verify_site checklist item changes status between runs, with {itemId, title, from, to, code, ready}; analytics.first_event once, when a site's analytics records its first event, with {siteId, at}. clientId limits it to one client; null is every client. owner (a path owner from set_path_owners, such as Forumulate) sends only events whose data.byOwner names it, today issue.new_critical, so a partner's regressions reach the partner and nobody else's do. The secret is in the response once. Answers 'tell my system when a crawl finishes'. Free.
    *
    * Requires `api:manage`. Agency-wide, changes state; not retried on 5xx.
    */

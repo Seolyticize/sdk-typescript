@@ -226,7 +226,7 @@ export type LaterEvent = {
   visit: string;
   /** The event's name, as a goal matches it: "Top-up", "Trial converted". */
   name: string;
-  /** Its properties; `value` is what a goal without a fixed worth sums. */
+  /** Its properties; `value`, in major units (42 for 42.00, in the site's currency), is what a goal without a fixed worth sums. */
   props?: Record<string, string | number | boolean> | undefined;
   /** The page it happened on, if it happened on one. */
   url?: string | undefined;

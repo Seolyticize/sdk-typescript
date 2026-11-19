@@ -209,14 +209,31 @@ async function failureFrom(response: Response): Promise<FailureBody> {
     };
   } catch {
     // A proxy in front of the API can answer with HTML; the status still speaks.
+    // A 5xx that is not our JSON came from the edge (Cloudflare), not the API.
+    const edge =
+      response.status < 500
+        ? undefined
+        : EDGE_TIMEOUTS.has(response.status)
+          ? "edge_timeout"
+          : "edge_error";
     return {
-      message: `HTTP ${response.status}`,
-      code: undefined,
+      message: edge
+        ? `HTTP ${response.status} from the edge in front of the API (${edge}); safe to retry.`
+        : `HTTP ${response.status}`,
+      code: edge,
       next: undefined,
-      requestId: response.headers.get("x-request-id") ?? undefined,
+      requestId:
+        response.headers.get("x-request-id") ??
+        response.headers.get("cf-ray") ??
+        undefined,
     };
   }
 }
+
+/** Gateway and Cloudflare origin timeouts: 504, 522 (connect), 524 (no answer in 100 s). */
+const EDGE_TIMEOUTS = new Set([504, 522, 524]);
+const isEdge = (code: string | undefined) =>
+  code === "edge_timeout" || code === "edge_error";
 
 export function createClient(options: ClientOptions): SeolyticizeClient {
   if (!options.apiKey) {
@@ -320,12 +337,18 @@ export function createClient(options: ClientOptions): SeolyticizeClient {
           continue;
         }
       }
-      if (status >= 500 && policy === "transient" && canRetry) {
+      const failure = await failureFrom(response);
+      // An edge failure never reached the API, or lost its answer: a write under
+      // its idempotency key is answered from the first answer, so it retries too.
+      if (
+        status >= 500 &&
+        canRetry &&
+        (policy === "transient" || (policy === "idempotent" && isEdge(failure.code)))
+      ) {
         await sleep(waitSeconds === null ? backoffMs(tries) : waitSeconds * 1000);
         continue;
       }
 
-      const failure = await failureFrom(response);
       throw errorForStatus(status, failure.message, {
         code: failure.code,
         next: failure.next,
