@@ -305,6 +305,14 @@ export function createClient(options: ClientOptions): SeolyticizeClient {
 
       const status = response.status;
       const waitSeconds = retryAfterSeconds(response.headers, Date.now());
+      // A refusal as data answers 402, 409 or 422 with ok:false: the same answer a 200 carried before.
+      if (status >= 400 && status < 500) {
+        const body = (await response
+          .clone()
+          .json()
+          .catch(() => null)) as { ok?: unknown } | null;
+        if (body?.ok === false) return body as T;
+      }
       // Still running: 202, or 409 for a key of our own that a 202 told us to poll with.
       if (status === 202 || (status === 409 && polls > 0)) {
         const pending = (await response.json()) as {

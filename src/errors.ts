@@ -90,9 +90,10 @@ export class ValidationError extends SeolyticizeError {
 }
 
 /**
- * 422: a well-formed request the product declined — a duplicate name, a plan
- * limit, nothing configured to run. Retrying the same call will be refused the
- * same way; the message says what has to change.
+ * 402, 409 or 422: a well-formed request the product declined — a spend cap
+ * (402), a duplicate name or nothing configured to run (409), input that has
+ * to change (422). Retrying the same call will be refused the same way; the
+ * message says what has to change.
  */
 export class RefusedError extends SeolyticizeError {
   constructor(message: string, options: SeolyticizeErrorOptions) {
@@ -149,7 +150,8 @@ export function errorForStatus(
   if (status === 401) return new AuthenticationError(message, base);
   if (status === 403) return new PermissionError(message, base);
   if (status === 404) return new NotFoundError(message, base);
-  if (status === 422) return new RefusedError(message, base);
+  if (status === 402 || status === 409 || status === 422)
+    return new RefusedError(message, base);
   if (status === 429) {
     return new RateLimitError(message, {
       ...base,

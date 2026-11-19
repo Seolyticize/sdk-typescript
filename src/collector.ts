@@ -52,8 +52,9 @@ export type CollectorOptions = {
   /** Query parameters to keep; everything else is stripped before sending. */
   allowParams?: string[];
   /**
-   * "all" reports every page view; "agents" only AI assistants. Use "agents"
-   * when the browser tag is also installed, or every person is counted twice.
+   * "all" reports every page view; "agents" only AI assistants' (custom events
+   * are always sent). Use "agents" when the browser tag is also installed, or
+   * every person is counted twice.
    */
   only?: "all" | "agents";
   /** How long a report may take before it is abandoned. Never delays the page. */
@@ -81,7 +82,37 @@ export type PageView = {
   /** "pageview" (the default) or a custom event's name. */
   name?: string | undefined;
   props?: Record<string, string | number | boolean> | undefined;
+  /** Your hashed id for a signed-in user (hashUserId), sent only with their consent. */
+  uid?: string | undefined;
 };
+
+/*
+ * An event with neither the visitor's address and user agent nor a visit
+ * token cannot be joined to any visit: it is stored, counted as unattributed.
+ * Said once per process, since the sender usually means to attribute it.
+ */
+let warnedNoContext = false;
+function warnNoContext(name: string) {
+  if (warnedNoContext) return;
+  warnedNoContext = true;
+  console.warn(
+    `[seolyticize] "${name}" was sent with no ip, userAgent or visit token, so it cannot be credited to a visit and counts as unattributed. Pass the visitor's ip and userAgent, or a visit token (trackLater). Said once per process.`,
+  );
+}
+
+/** Why a 202 stored the event joined to no visit ("credited": "none"), or null. */
+async function unattributed(response: Response): Promise<string | null> {
+  if (!response.headers.get("content-type")?.includes("json")) return null;
+  const answer = (await response
+    .clone()
+    .json()
+    .catch(() => null)) as { credited?: unknown; unattributed?: unknown } | null;
+  if (answer?.credited !== "none") return null;
+  return typeof answer.unattributed === "string" ? answer.unattributed : "unattributed";
+}
+
+const notCredited = (name: string, why: string) =>
+  new Error(`Seolyticize stored "${name}" as unattributed (${why}): it joined no visit.`);
 
 /*
  * The AI assistants that read pages on somebody's behalf. Kept in step with
@@ -230,10 +261,17 @@ export type LaterEvent = {
   props?: Record<string, string | number | boolean> | undefined;
   /** The page it happened on, if it happened on one. */
   url?: string | undefined;
+  /** Your hashed id for the signed-in user (hashUserId), sent only with their consent. */
+  uid?: string | undefined;
 };
 
 /** What became of one report; dropped is the collector's reason (X-Seolyticize-Dropped). */
-export type TrackResult = { accepted: boolean; dropped?: string };
+export type TrackResult = {
+  accepted: boolean;
+  dropped?: string;
+  /** Stored, but joined to no visit: "no_visitor_context" or "no_recent_visit". */
+  unattributed?: string;
+};
 
 export type Collector = {
   /** Reports one page view (or event). Resolves when sent, never rejects. */
@@ -281,7 +319,11 @@ export function createCollector(options: CollectorOptions): Collector {
         ? "person"
         : classifyAgent(view.userAgent ?? "", view.signatureAgent);
     if (kind === "bot") return null;
-    if (!everyone && options.only === "agents" && kind !== "agent") return null;
+    // "agents" is about page views; a server's own event (a purchase) always goes.
+    const pageview = (view.name ?? "pageview") === "pageview";
+    if (!everyone && pageview && options.only === "agents" && kind !== "agent")
+      return null;
+    if (!view.ip && !view.userAgent) warnNoContext(view.name ?? "pageview");
 
     const body: Record<string, unknown> = {
       k: options.siteKey,
@@ -296,6 +338,7 @@ export function createCollector(options: CollectorOptions): Collector {
     if (view.clientHints) body.h = view.clientHints.slice(0, 512);
     if (view.signatureAgent) body.sa = view.signatureAgent.slice(0, 256);
     if (view.props && Object.keys(view.props).length > 0) body.p = view.props;
+    if (view.uid) body.uid = view.uid;
     return body;
   }
 
@@ -344,7 +387,12 @@ export function createCollector(options: CollectorOptions): Collector {
         }
         return { accepted: false, dropped };
       }
-      if (response.status === 202) return { accepted: true };
+      if (response.status === 202) {
+        const why = view.name ? await unattributed(response) : null;
+        if (!why) return { accepted: true };
+        options.onError?.(notCredited(view.name!, why));
+        return { accepted: true, unattributed: why };
+      }
       options.onError?.(refused(response.status));
       return { accepted: false };
     } catch (error) {
@@ -364,6 +412,8 @@ export function createCollector(options: CollectorOptions): Collector {
         options.onError?.(refused(response.status));
         return null;
       }
+      const why = await unattributed(response);
+      if (why) options.onError?.(notCredited(view.name, why));
       const answer = (await response.json().catch(() => null)) as {
         visit?: unknown;
       } | null;
@@ -383,6 +433,7 @@ export function createCollector(options: CollectorOptions): Collector {
       };
       if (event.url) body.u = stripQuery(event.url, allowed);
       if (event.props && Object.keys(event.props).length > 0) body.p = event.props;
+      if (event.uid) body.uid = event.uid;
       const response = await send(body);
       if (response.status === 202) return true;
       // 410: the token outlived its 35 days; 404: its visit was not found;
@@ -401,17 +452,22 @@ export function createCollector(options: CollectorOptions): Collector {
     reports,
     async trackRequest(request) {
       if (!isPageRequest(request.method, request.headers)) return;
-      await track({
-        url: request.url,
-        referrer: request.headers.get("referer"),
-        // An empty header is still a request with no browser named, not a server event.
-        userAgent: request.headers.get("user-agent") || null,
-        ip: addressFrom(request.headers),
-        country: request.headers.get("cf-ipcountry"),
-        clientHints: request.headers.get("sec-ch-ua"),
-        signatureAgent: request.headers.get("signature-agent"),
-      });
+      await track(visitorOf(request));
     },
+  };
+}
+
+/** The visitor behind a standard Request: its page, address, user agent and the rest. */
+export function visitorOf(request: Request): PageView {
+  return {
+    url: request.url,
+    referrer: request.headers.get("referer"),
+    // An empty header is still a request with no browser named, not a server event.
+    userAgent: request.headers.get("user-agent") || null,
+    ip: addressFrom(request.headers),
+    country: request.headers.get("cf-ipcountry"),
+    clientHints: request.headers.get("sec-ch-ua"),
+    signatureAgent: request.headers.get("signature-agent"),
   };
 }
 

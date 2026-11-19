@@ -31,9 +31,21 @@ export {
   stripQuery,
   addressFrom,
   isPageRequest,
+  visitorOf,
   DEFAULT_COLLECT_URL,
   DEFAULT_ALLOWED_PARAMS,
 } from "./collector.js";
+export {
+  VISIT_HEADER,
+  VISIT_METADATA_KEY,
+  checkoutMetadata,
+  hashUserId,
+  majorUnits,
+  recordStripeEvent,
+  reportSignup,
+  stripePurchase,
+} from "./attribution.js";
+export type { StripeEventLike, StripePurchase } from "./attribution.js";
 export type {
   Collector,
   CollectorOptions,

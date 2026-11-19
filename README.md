@@ -132,16 +132,16 @@ Pass `{ signal }` as the last argument of any call to cancel it.
 Every failure is a `SeolyticizeError` with `status`, `tool` and the server's own sentence
 as `message`. Branch on the subclass:
 
-| Class                 | Status | Meaning                                                         |
-| --------------------- | ------ | --------------------------------------------------------------- |
-| `ValidationError`     | 400    | Input did not match the tool's schema; the message names fields |
-| `AuthenticationError` | 401    | Missing, unknown or revoked key                                 |
-| `PermissionError`     | 403    | The key's role or client scope does not allow this              |
-| `NotFoundError`       | 404    | No tool by that name                                            |
-| `RefusedError`        | 422    | Well-formed, but declined — duplicate name, plan limit, …       |
-| `RateLimitError`      | 429    | Window used up; `retryAfterSeconds` says how long to wait       |
-| `ServerError`         | 5xx    | Could not be completed; the server never says why               |
-| `NetworkError`        | —      | No response at all (DNS, TLS, timeout)                          |
+| Class                 | Status        | Meaning                                                                            |
+| --------------------- | ------------- | ---------------------------------------------------------------------------------- |
+| `ValidationError`     | 400           | Input did not match the tool's schema; the message names fields                    |
+| `AuthenticationError` | 401           | Missing, unknown or revoked key                                                    |
+| `PermissionError`     | 403           | The key's role or client scope does not allow this                                 |
+| `NotFoundError`       | 404           | No tool by that name                                                               |
+| `RefusedError`        | 402, 409, 422 | Well-formed, but declined — spend cap (402), duplicate name (409), bad input (422) |
+| `RateLimitError`      | 429           | Window used up; `retryAfterSeconds` says how long to wait                          |
+| `ServerError`         | 5xx           | Could not be completed; the server never says why                                  |
+| `NetworkError`        | —             | No response at all (DNS, TLS, timeout)                                             |
 
 ```ts
 import { RefusedError, RateLimitError } from "@seolyticize/sdk";
