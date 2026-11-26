@@ -64,6 +64,8 @@ export type CollectorOptions = {
   onError?: (error: unknown) => void;
   /** Names the package sending, as get_web_analytics_setup's clients list shows it. Default "sdk/<version>". */
   client?: string;
+  /** How many proxies of yours append to X-Forwarded-For (addressFrom); trackRequest reads the address by it. */
+  trustedProxies?: number;
 };
 
 export type PageView = {
@@ -84,6 +86,10 @@ export type PageView = {
   props?: Record<string, string | number | boolean> | undefined;
   /** Your hashed id for a signed-in user (hashUserId), sent only with their consent. */
   uid?: string | undefined;
+  /** The visitor sent Global Privacy Control (Sec-GPC: 1): nothing is sent, as the tag would send nothing. */
+  gpc?: boolean | undefined;
+  /** The tenant of a multi-tenant product the event belongs to (a creator, a shop), up to 64 characters. */
+  tenant?: string | undefined;
 };
 
 /*
@@ -226,12 +232,35 @@ function referrerOrigin(referrer: string | null | undefined): string | undefined
  * The visitor's address from the usual proxy headers: Cloudflare's, then
  * X-Real-IP, then the first X-Forwarded-For entry — the client end, as your
  * own proxy wrote it. Pass `ip` yourself when your proxy says it another way.
+ *
+ * Trust model: every one of these headers can be written by the client, so
+ * they are only as true as the proxy in front of you. That is fine when it
+ * sets them (Cloudflare, or nginx with `proxy_set_header X-Real-IP`); behind a
+ * proxy that appends to a client-sent X-Forwarded-For, the first entry is
+ * whatever the client wrote. Then pass `trustedProxies`, the number of your
+ * proxies that append: the address is read that many entries from the right,
+ * and CF-Connecting-IP and X-Real-IP are ignored.
  */
-export function addressFrom(headers: Headers): string | undefined {
+export function addressFrom(
+  headers: Headers,
+  options: { trustedProxies?: number | undefined } = {},
+): string | undefined {
+  const hops = options.trustedProxies;
+  const forwarded = (headers.get("x-forwarded-for") ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  if (hops !== undefined && hops > 0) {
+    return forwarded[Math.max(0, forwarded.length - hops)];
+  }
   const direct = headers.get("cf-connecting-ip") ?? headers.get("x-real-ip");
   if (direct) return direct.trim();
-  const forwarded = headers.get("x-forwarded-for");
-  return forwarded ? forwarded.split(",")[0]?.trim() || undefined : undefined;
+  return forwarded[0];
+}
+
+/** Whether the visitor asked not to be tracked with Global Privacy Control (Sec-GPC: 1). */
+export function privacySignalsFrom(headers: Headers): { gpc: boolean } {
+  return { gpc: headers.get("sec-gpc")?.trim() === "1" };
 }
 
 /**
@@ -263,6 +292,8 @@ export type LaterEvent = {
   url?: string | undefined;
   /** Your hashed id for the signed-in user (hashUserId), sent only with their consent. */
   uid?: string | undefined;
+  /** The tenant of a multi-tenant product the event belongs to, up to 64 characters. */
+  tenant?: string | undefined;
 };
 
 /** What became of one report; dropped is the collector's reason (X-Seolyticize-Dropped). */
@@ -311,6 +342,7 @@ export function createCollector(options: CollectorOptions): Collector {
 
   /** What is sent for a view, or null when nothing should be. */
   function bodyFor(view: PageView, everyone: boolean): Record<string, unknown> | null {
+    if (view.gpc) return null;
     const page = new URL(view.url);
     if (!reports(page.pathname)) return null;
     // No user agent given: the site's own server reporting an event, not a bot.
@@ -339,6 +371,7 @@ export function createCollector(options: CollectorOptions): Collector {
     if (view.signatureAgent) body.sa = view.signatureAgent.slice(0, 256);
     if (view.props && Object.keys(view.props).length > 0) body.p = view.props;
     if (view.uid) body.uid = view.uid;
+    if (view.tenant) body.tenant = view.tenant.slice(0, 64);
     return body;
   }
 
@@ -377,7 +410,7 @@ export function createCollector(options: CollectorOptions): Collector {
   async function track(view: PageView): Promise<TrackResult> {
     try {
       const body = bodyFor(view, false);
-      if (!body) return { accepted: false, dropped: "not_reported" };
+      if (!body) return { accepted: false, dropped: view.gpc ? "gpc" : "not_reported" };
       const response = await send(body);
       const dropped = response.headers.get("x-seolyticize-dropped");
       if (dropped) {
@@ -434,6 +467,7 @@ export function createCollector(options: CollectorOptions): Collector {
       if (event.url) body.u = stripQuery(event.url, allowed);
       if (event.props && Object.keys(event.props).length > 0) body.p = event.props;
       if (event.uid) body.uid = event.uid;
+      if (event.tenant) body.tenant = event.tenant.slice(0, 64);
       const response = await send(body);
       if (response.status === 202) return true;
       // 410: the token outlived its 35 days; 404: its visit was not found;
@@ -452,22 +486,50 @@ export function createCollector(options: CollectorOptions): Collector {
     reports,
     async trackRequest(request) {
       if (!isPageRequest(request.method, request.headers)) return;
-      await track(visitorOf(request));
+      await track(visitorOf(request, options));
     },
   };
 }
 
-/** The visitor behind a standard Request: its page, address, user agent and the rest. */
-export function visitorOf(request: Request): PageView {
+/**
+ * A request as any server has it: a standard Request fits, and so does
+ * `{ url, headers: req.headers, ip: req.ip }` from Fastify, Express, Koa or
+ * Node http (a full URL; headers as a Headers or Node's plain object). `ip`,
+ * when given, is used as is, for a framework that already worked it out.
+ */
+export type RequestLike = {
+  url: string;
+  headers: Headers | Record<string, string | string[] | undefined>;
+  ip?: string | undefined;
+};
+
+/** Headers from a Headers or Node's plain header object. */
+export function headersOf(headers: RequestLike["headers"]): Headers {
+  if (typeof (headers as Headers).get === "function") return headers as Headers;
+  const out = new Headers();
+  for (const [name, value] of Object.entries(headers)) {
+    const joined = header(value as string | string[] | undefined);
+    if (joined !== null) out.set(name, joined);
+  }
+  return out;
+}
+
+/** The visitor behind a request: its page, address, user agent, country (CF-IPCountry) and GPC. */
+export function visitorOf(
+  request: RequestLike,
+  options: { trustedProxies?: number | undefined } = {},
+): PageView {
+  const headers = headersOf(request.headers);
   return {
     url: request.url,
-    referrer: request.headers.get("referer"),
+    referrer: headers.get("referer"),
     // An empty header is still a request with no browser named, not a server event.
-    userAgent: request.headers.get("user-agent") || null,
-    ip: addressFrom(request.headers),
-    country: request.headers.get("cf-ipcountry"),
-    clientHints: request.headers.get("sec-ch-ua"),
-    signatureAgent: request.headers.get("signature-agent"),
+    userAgent: headers.get("user-agent") || null,
+    ip: request.ip || addressFrom(headers, options),
+    country: headers.get("cf-ipcountry"),
+    clientHints: headers.get("sec-ch-ua"),
+    signatureAgent: headers.get("signature-agent"),
+    gpc: privacySignalsFrom(headers).gpc,
   };
 }
 
@@ -497,14 +559,10 @@ const header = (value: string | string[] | undefined) =>
  */
 export function expressCollector(
   collector: Collector,
-  options: { trustProxy?: boolean } = {},
+  options: { trustProxy?: boolean; trustedProxies?: number } = {},
 ): (req: NodeRequest, res: NodeResponse, next: () => void) => void {
   return (req, res, next) => {
-    const headers = new Headers();
-    for (const [name, value] of Object.entries(req.headers)) {
-      const joined = header(value);
-      if (joined !== null) headers.set(name, joined);
-    }
+    const headers = headersOf(req.headers);
     if (isPageRequest(req.method ?? "GET", headers)) {
       res.on("finish", () => {
         if (res.statusCode < 200 || res.statusCode >= 300) return;
@@ -517,12 +575,13 @@ export function expressCollector(
           referrer: headers.get("referer"),
           userAgent: headers.get("user-agent") || null,
           ip:
-            (options.trustProxy === false ? undefined : addressFrom(headers)) ??
+            (options.trustProxy === false ? undefined : addressFrom(headers, options)) ??
             req.ip ??
             req.socket?.remoteAddress,
           country: headers.get("cf-ipcountry"),
           clientHints: headers.get("sec-ch-ua"),
           signatureAgent: headers.get("signature-agent"),
+          gpc: privacySignalsFrom(headers).gpc,
         });
       });
     }

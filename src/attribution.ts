@@ -4,7 +4,13 @@
  * request that made it, and a Stripe Checkout purchase joined to its visit
  * through the session's metadata.
  */
-import { visitorOf, type Collector, type TrackResult } from "./collector.js";
+import {
+  headersOf,
+  visitorOf,
+  type Collector,
+  type RequestLike,
+  type TrackResult,
+} from "./collector.js";
 
 /** The Checkout metadata key the visit token travels in (also what connect_external_events reads). */
 export const VISIT_METADATA_KEY = "seolyticize_visit";
@@ -40,7 +46,7 @@ export function majorUnits(amountMinor: number, currency: string): number {
  * The visitor behind a POST from a page: the page is the Referer (same-origin
  * POSTs send it whole), not the API route, which a site often excludes.
  */
-function fromPage(request: Request) {
+function fromPage(request: RequestLike) {
   const visitor = visitorOf(request);
   return { ...visitor, url: visitor.referrer || request.url, referrer: null };
 }
@@ -49,11 +55,16 @@ function fromPage(request: Request) {
  * Reports a sign-up for the visitor making this request and resolves with
  * its visit token (null when none could be had). With the page's own token in
  * X-Seolyticize-Visit it is credited to that visit; otherwise it joins the
- * visitor's recent visit by address and user agent. Never rejects.
+ * visitor's recent visit by address and user agent. Any server's request
+ * will do, not only a web Request: `{ url, headers, ip }` (RequestLike).
+ * Never rejects.
+ *
+ *   // Fastify
+ *   await reportSignup(collector, { url: `https://${req.hostname}${req.url}`, headers: req.headers, ip: req.ip });
  */
 export async function reportSignup(
   collector: Collector,
-  request: Request,
+  request: RequestLike,
   options: {
     uid?: string | undefined;
     props?: Record<string, string | number | boolean> | undefined;
@@ -61,7 +72,7 @@ export async function reportSignup(
   } = {},
 ): Promise<string | null> {
   const name = options.name ?? "Signup";
-  const visit = request.headers.get(VISIT_HEADER);
+  const visit = headersOf(request.headers).get(VISIT_HEADER);
   const page = fromPage(request);
   if (visit) {
     const credited = await collector.trackLater({
@@ -89,10 +100,10 @@ export async function reportSignup(
  */
 export async function checkoutMetadata(
   collector: Collector,
-  request: Request,
+  request: RequestLike,
 ): Promise<Record<string, string>> {
   const visit =
-    request.headers.get(VISIT_HEADER) ||
+    headersOf(request.headers).get(VISIT_HEADER) ||
     (await collector.trackForVisit({ ...fromPage(request), name: "Checkout" }));
   return visit ? { [VISIT_METADATA_KEY]: visit } : {};
 }

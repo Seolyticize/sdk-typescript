@@ -32,6 +32,7 @@ export {
   addressFrom,
   isPageRequest,
   visitorOf,
+  privacySignalsFrom,
   DEFAULT_COLLECT_URL,
   DEFAULT_ALLOWED_PARAMS,
 } from "./collector.js";
@@ -51,5 +52,6 @@ export type {
   CollectorOptions,
   PageView,
   LaterEvent,
+  RequestLike,
   TrackResult,
 } from "./collector.js";
